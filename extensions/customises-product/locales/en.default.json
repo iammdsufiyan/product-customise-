@@ -1,0 +1,150 @@
+{
+  "name": "Product Customizer",
+  "description": "Allow customers to personalize products with text, images, and design options",
+  "blocks": {
+    "product_personalizer": {
+      "name": "Product Personalizer",
+      "settings": {
+        "title": {
+          "label": "Title",
+          "info": "Heading text for the personalizer block"
+        },
+        "description": {
+          "label": "Description",
+          "info": "Optional description text to guide customers"
+        },
+        "enable_text_input": {
+          "label": "Enable text input",
+          "info": "Allow customers to add custom text"
+        },
+        "text_label": {
+          "label": "Text input label",
+          "info": "Label for the text input field"
+        },
+        "text_placeholder": {
+          "label": "Text input placeholder",
+          "info": "Placeholder text shown in the input field"
+        },
+        "text_required": {
+          "label": "Text input required",
+          "info": "Make text input mandatory"
+        },
+        "text_max_length": {
+          "label": "Maximum text length",
+          "info": "Maximum number of characters allowed"
+        },
+        "enable_font_selection": {
+          "label": "Enable font selection",
+          "info": "Allow customers to choose font family"
+        },
+        "font_label": {
+          "label": "Font selection label",
+          "info": "Label for the font selection dropdown"
+        },
+        "enable_color_selection": {
+          "label": "Enable color selection",
+          "info": "Allow customers to choose text color"
+        },
+        "color_label": {
+          "label": "Color selection label",
+          "info": "Label for the color selection options"
+        },
+        "show_preview": {
+          "label": "Show preview",
+          "info": "Display a live preview of the customization"
+        },
+        "preview_title": {
+          "label": "Preview title",
+          "info": "Heading for the preview section"
+        },
+        "preview_placeholder": {
+          "label": "Preview placeholder text",
+          "info": "Text shown when no customization is entered"
+        },
+        "personalization_price": {
+          "label": "Personalization price",
+          "info": "Additional cost for personalization in cents"
+        }
+      }
+    },
+    "advanced_personalizer": {
+      "name": "Advanced Product Personalizer",
+      "settings": {
+        "title": {
+          "label": "Title",
+          "info": "Heading text for the advanced personalizer block"
+        },
+        "description": {
+          "label": "Description",
+          "info": "Optional description text to guide customers"
+        },
+        "enable_text_fields": {
+          "label": "Enable text fields",
+          "info": "Allow customers to add multiple text fields"
+        },
+        "enable_font_options": {
+          "label": "Enable font options",
+          "info": "Allow customers to customize font family, size, and style"
+        },
+        "enable_color_options": {
+          "label": "Enable color options",
+          "info": "Allow customers to choose text and background colors"
+        },
+        "enable_background_color": {
+          "label": "Enable background color",
+          "info": "Allow customers to change background color"
+        },
+        "enable_image_upload": {
+          "label": "Enable image upload",
+          "info": "Allow customers to upload custom images"
+        },
+        "enable_position_controls": {
+          "label": "Enable position controls",
+          "info": "Allow customers to control text alignment and position"
+        },
+        "show_preview": {
+          "label": "Show preview",
+          "info": "Display a live canvas preview of the customization"
+        },
+        "preview_title": {
+          "label": "Preview title",
+          "info": "Heading for the preview section"
+        },
+        "preview_placeholder": {
+          "label": "Preview placeholder text",
+          "info": "Text shown when no customization is entered"
+        },
+        "canvas_width": {
+          "label": "Canvas width",
+          "info": "Width of the preview canvas in pixels"
+        },
+        "canvas_height": {
+          "label": "Canvas height",
+          "info": "Height of the preview canvas in pixels"
+        },
+        "enable_download": {
+          "label": "Enable download preview",
+          "info": "Allow customers to download their customization preview"
+        },
+        "personalization_price": {
+          "label": "Personalization price",
+          "info": "Additional cost for advanced personalization in cents"
+        }
+      }
+    }
+  },
+  "general": {
+    "preview": "Preview",
+    "customize": "Customize",
+    "personalize": "Personalize",
+    "upload_image": "Upload Image",
+    "download_preview": "Download Preview",
+    "character_count": "Character Count",
+    "max_file_size": "Maximum file size: 5MB",
+    "supported_formats": "Supported formats: JPG, PNG, GIF",
+    "required_field": "This field is required",
+    "text_too_long": "Text is too long",
+    "invalid_file_type": "Invalid file type",
+    "file_too_large": "File is too large"
+  }
+}

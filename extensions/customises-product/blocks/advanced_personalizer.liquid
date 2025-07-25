@@ -1,0 +1,1048 @@
+{% comment %}
+  Advanced Product Personalizer Block
+  Universal product customizer with 1000x1000px canvas, live text input, logo upload, and background image support
+  Works with any product including Orange Snowboard1 and all merchant products
+{% endcomment %}
+
+<div class="advanced-personalizer" data-block-id="{{ block.id }}" data-product-handle="{{ product.handle }}">
+  {% if block.settings.show_title %}
+    <h3 class="personalizer-title">{{ block.settings.title | default: 'Customize Your ' | append: product.title }}</h3>
+  {% endif %}
+
+  {% if block.settings.description != blank %}
+    <div class="personalizer-description">
+      {{ block.settings.description }}
+    </div>
+  {% endif %}
+
+  <div class="personalizer-container">
+    <div class="personalizer-controls">
+      <form class="personalizer-form" data-product-id="{{ product.id }}">
+        
+        {% comment %} Name Input Field {% endcomment %}
+        {% if block.settings.enable_name_field %}
+          <div class="field-group">
+            <h4>Personalization</h4>
+            
+            <div class="personalizer-field">
+              <label for="name-field-{{ block.id }}">
+                {{ block.settings.name_field_label | default: 'Your Name' }}
+                {% if block.settings.name_field_required %}*{% endif %}
+              </label>
+              <input
+                type="text"
+                id="name-field-{{ block.id }}"
+                name="custom_name"
+                placeholder="{{ block.settings.name_field_placeholder | default: 'Enter your name...' }}"
+                maxlength="{{ block.settings.name_max_length | default: 30 }}"
+                {% if block.settings.name_field_required %}required{% endif %}
+                class="personalizer-input"
+                data-field-type="name"
+                data-position="center"
+              >
+              <small class="character-count">
+                <span class="current-count">0</span>/{{ block.settings.name_max_length | default: 30 }}
+              </small>
+            </div>
+          </div>
+        {% endif %}
+
+        {% comment %} Additional Text Fields {% endcomment %}
+        {% if block.settings.enable_text_fields %}
+          <div class="field-group">
+            <h4>Additional Text</h4>
+            
+            {% for i in (1..2) %}
+              {% assign field_enabled = 'enable_text_field_' | append: i %}
+              {% assign field_label = 'text_field_' | append: i | append: '_label' %}
+              {% assign field_placeholder = 'text_field_' | append: i | append: '_placeholder' %}
+              {% assign field_required = 'text_field_' | append: i | append: '_required' %}
+              
+              {% if block.settings[field_enabled] %}
+                <div class="personalizer-field">
+                  <label for="text-field-{{ i }}-{{ block.id }}">
+                    {{ block.settings[field_label] | default: 'Text Field ' | append: i }}
+                    {% if block.settings[field_required] %}*{% endif %}
+                  </label>
+                  <input
+                    type="text"
+                    id="text-field-{{ i }}-{{ block.id }}"
+                    name="text_field_{{ i }}"
+                    placeholder="{{ block.settings[field_placeholder] }}"
+                    maxlength="50"
+                    {% if block.settings[field_required] %}required{% endif %}
+                    class="personalizer-input"
+                    data-field-type="text"
+                    data-field-index="{{ i }}"
+                  >
+                </div>
+              {% endif %}
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% comment %} Font and Style Options {% endcomment %}
+        {% if block.settings.enable_font_options %}
+          <div class="field-group">
+            <h4>Font & Style</h4>
+            
+            <div class="personalizer-field">
+              <label for="font-family-{{ block.id }}">Font Family</label>
+              <select id="font-family-{{ block.id }}" name="font_family" class="personalizer-select">
+                <option value="Arial">Arial</option>
+                <option value="Helvetica">Helvetica</option>
+                <option value="Times New Roman">Times New Roman</option>
+                <option value="Georgia">Georgia</option>
+                <option value="Courier New">Courier New</option>
+                <option value="Impact">Impact</option>
+                <option value="Comic Sans MS">Comic Sans MS</option>
+              </select>
+            </div>
+
+            <div class="personalizer-field">
+              <label for="font-size-{{ block.id }}">Font Size</label>
+              <input 
+                type="range" 
+                id="font-size-{{ block.id }}" 
+                name="font_size" 
+                min="12" 
+                max="48" 
+                value="18" 
+                class="personalizer-range"
+              >
+              <span class="range-value">18px</span>
+            </div>
+
+            <div class="personalizer-field">
+              <label>Font Style</label>
+              <div class="checkbox-group">
+                <label class="checkbox-label">
+                  <input type="checkbox" name="font_bold" value="bold"> Bold
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" name="font_italic" value="italic"> Italic
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" name="font_underline" value="underline"> Underline
+                </label>
+              </div>
+            </div>
+          </div>
+        {% endif %}
+
+        {% comment %} Color Options {% endcomment %}
+        {% if block.settings.enable_color_options %}
+          <div class="field-group">
+            <h4>Colors</h4>
+            
+            <div class="personalizer-field">
+              <label for="text-color-{{ block.id }}">Text Color</label>
+              <input 
+                type="color" 
+                id="text-color-{{ block.id }}" 
+                name="text_color" 
+                value="#000000" 
+                class="personalizer-color"
+              >
+            </div>
+
+            {% if block.settings.enable_background_color %}
+              <div class="personalizer-field">
+                <label for="bg-color-{{ block.id }}">Background Color</label>
+                <input 
+                  type="color" 
+                  id="bg-color-{{ block.id }}" 
+                  name="background_color" 
+                  value="#ffffff" 
+                  class="personalizer-color"
+                >
+              </div>
+            {% endif %}
+          </div>
+        {% endif %}
+
+        {% comment %} Logo Upload {% endcomment %}
+        {% if block.settings.enable_logo_upload %}
+          <div class="field-group">
+            <h4>Logo Upload</h4>
+            
+            <div class="personalizer-field">
+              <label for="logo-upload-{{ block.id }}">Upload Your Logo</label>
+              <input
+                type="file"
+                id="logo-upload-{{ block.id }}"
+                name="custom_logo"
+                accept="image/*"
+                class="personalizer-file"
+                data-upload-type="logo"
+              >
+              <div class="file-info">
+                <small>📍 Logo will be positioned at the <strong>bottom area only</strong> of your product.</small>
+                <small>Supported: JPG, PNG, GIF. Max size: 5MB.</small>
+              </div>
+              <div class="logo-preview" id="logo-preview-{{ block.id }}" style="display: none;">
+                <img id="logo-preview-img-{{ block.id }}" src="" alt="Logo preview" width="100" height="100" style="max-width: 100px; max-height: 100px; border-radius: 4px; border: 1px solid #ddd;">
+                <button type="button" class="remove-btn" data-remove="logo">Remove Logo</button>
+              </div>
+            </div>
+
+            <div class="personalizer-field">
+              <label for="logo-size-{{ block.id }}">Logo Size</label>
+              <input
+                type="range"
+                id="logo-size-{{ block.id }}"
+                name="logo_size"
+                min="50"
+                max="200"
+                value="100"
+                class="personalizer-range"
+              >
+              <span class="logo-size-value">100px</span>
+            </div>
+          </div>
+        {% endif %}
+
+        {% comment %} Background Image Upload {% endcomment %}
+        {% if block.settings.enable_background_upload %}
+          <div class="field-group">
+            <h4>Background Image</h4>
+            
+            <div class="personalizer-field">
+              <label for="background-upload-{{ block.id }}">Upload Background Image</label>
+              <input
+                type="file"
+                id="background-upload-{{ block.id }}"
+                name="background_image"
+                accept="image/*"
+                class="personalizer-file"
+                data-upload-type="background"
+              >
+              <div class="file-info">
+                <small>Supported: JPG, PNG, GIF. Max size: 10MB. This will be the product background.</small>
+              </div>
+              <div class="background-preview" id="background-preview-{{ block.id }}" style="display: none;">
+                <img id="background-preview-img-{{ block.id }}" src="" alt="Background preview" width="100" height="100" style="max-width: 100px; max-height: 100px; border-radius: 4px; border: 1px solid #ddd;">
+                <button type="button" class="remove-btn" data-remove="background">Remove Background</button>
+              </div>
+            </div>
+          </div>
+        {% endif %}
+
+        {% comment %} Position Controls {% endcomment %}
+        {% if block.settings.enable_position_controls %}
+          <div class="field-group">
+            <h4>Text Position</h4>
+            
+            <div class="personalizer-field">
+              <label for="text-x-{{ block.id }}">Text X Coordinate</label>
+              <input
+                type="range"
+                id="text-x-{{ block.id }}"
+                name="text_x_position"
+                min="0"
+                max="1000"
+                value="500"
+                class="personalizer-range"
+              >
+              <span class="text-x-value">500px</span>
+            </div>
+
+            <div class="personalizer-field">
+              <label for="text-y-{{ block.id }}">Text Y Coordinate</label>
+              <input
+                type="range"
+                id="text-y-{{ block.id }}"
+                name="text_y_position"
+                min="0"
+                max="1000"
+                value="500"
+                class="personalizer-range"
+              >
+              <span class="text-y-value">500px</span>
+            </div>
+          </div>
+        {% endif %}
+
+        {% comment %} Logo Position Controls {% endcomment %}
+        {% if block.settings.enable_logo_upload and block.settings.enable_logo_positioning %}
+          <div class="field-group">
+            <h4>Logo Position</h4>
+            
+            <div class="personalizer-field">
+              <label for="logo-x-{{ block.id }}">Logo X Coordinate</label>
+              <input
+                type="range"
+                id="logo-x-{{ block.id }}"
+                name="logo_x_position"
+                min="0"
+                max="1000"
+                value="500"
+                class="personalizer-range"
+              >
+              <span class="logo-x-value">500px</span>
+            </div>
+
+            <div class="personalizer-field">
+              <label for="logo-y-{{ block.id }}">Logo Y Coordinate</label>
+              <input
+                type="range"
+                id="logo-y-{{ block.id }}"
+                name="logo_y_position"
+                min="0"
+                max="1000"
+                value="800"
+                class="personalizer-range"
+              >
+              <span class="logo-y-value">800px</span>
+            </div>
+          </div>
+        {% endif %}
+
+
+        <input type="hidden" name="personalization_data" id="personalization-data-{{ block.id }}">
+      </form>
+    </div>
+
+    {% comment %} Live Preview Canvas {% endcomment %}
+    {% if block.settings.show_preview %}
+      <div class="personalizer-preview">
+        <h4>{{ block.settings.preview_title | default: 'Live Preview' }}</h4>
+        <div class="preview-canvas" id="preview-canvas-{{ block.id }}">
+          <canvas
+            id="canvas-{{ block.id }}"
+            width="1000"
+            height="1000"
+            style="max-width: 100%; height: auto; border: 2px solid #ddd; border-radius: 8px; background-color: #f9f9f9;"
+          ></canvas>
+          <div class="canvas-overlay" id="canvas-overlay-{{ block.id }}">
+            <!-- Product Image Background -->
+            {% if product.featured_image %}
+              <div class="product-image-background" id="product-image-bg-{{ block.id }}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none;">
+                <img
+                  src="{{ product.featured_image | img_url: '1000x1000' }}"
+                  alt="{{ product.featured_image.alt | default: product.title }}"
+                  width="1000"
+                  height="1000"
+                  style="width: 100%; height: 100%; object-fit: cover; border-radius: 6px;"
+                  id="product-bg-img-{{ block.id }}"
+                >
+              </div>
+            {% endif %}
+            
+            <div class="preview-text" id="preview-text-{{ block.id }}" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10; pointer-events: none; color: white; font-weight: bold; text-shadow: 2px 2px 4px rgba(0,0,0,0.8);">
+              {{ block.settings.preview_placeholder | default: 'Your customization will appear here' }}
+            </div>
+            <div class="preview-logo" id="preview-logo-{{ block.id }}" style="position: absolute; bottom: 10%; left: 50%; transform: translateX(-50%); z-index: 10; display: none; pointer-events: none;">
+              <img id="logo-display-{{ block.id }}" src="" alt="Custom logo" width="100" height="100" style="max-width: 100px; max-height: 100px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
+            </div>
+          </div>
+        </div>
+        
+        {% if block.settings.enable_download %}
+          <button type="button" class="download-btn" id="download-btn-{{ block.id }}">
+            Download Preview
+          </button>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+
+  {% comment %} Price Addition {% endcomment %}
+  {% if block.settings.personalization_price > 0 %}
+    <div class="personalization-price">
+      <strong>
+        Customization: +{{ block.settings.personalization_price | money }}
+      </strong>
+    </div>
+  {% endif %}
+</div>
+
+<style>
+  .advanced-personalizer {
+    margin: 20px 0;
+    padding: 20px;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  }
+
+  .personalizer-title {
+    margin: 0 0 15px 0;
+    font-size: 1.4em;
+    font-weight: bold;
+    color: #333;
+  }
+
+  .personalizer-description {
+    margin-bottom: 20px;
+    color: #666;
+    font-size: 0.95em;
+    line-height: 1.5;
+  }
+
+  .personalizer-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    align-items: start;
+  }
+
+  .field-group {
+    margin-bottom: 25px;
+    padding: 15px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  .field-group h4 {
+    margin: 0 0 15px 0;
+    font-size: 1.1em;
+    color: #333;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 5px;
+  }
+
+  .personalizer-field {
+    margin-bottom: 15px;
+  }
+
+  .personalizer-field label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    font-size: 0.9em;
+    color: #555;
+  }
+
+  .personalizer-input,
+  .personalizer-select {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    font-size: 1em;
+    transition: border-color 0.3s ease;
+  }
+
+  .personalizer-input:focus,
+  .personalizer-select:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+  }
+
+  .personalizer-range {
+    width: 100%;
+    margin: 10px 0;
+  }
+
+  .range-value {
+    display: inline-block;
+    margin-left: 10px;
+    font-weight: bold;
+    color: #007bff;
+  }
+
+  .personalizer-color {
+    width: 60px;
+    height: 40px;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  .personalizer-file {
+    width: 100%;
+    padding: 10px;
+    border: 2px dashed #ddd;
+    border-radius: 6px;
+    background-color: #f8f9fa;
+  }
+
+  .file-info {
+    margin-top: 5px;
+  }
+
+  .file-info small {
+    color: #666;
+    font-size: 0.8em;
+  }
+
+  .logo-preview,
+  .background-preview {
+    margin-top: 10px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background-color: #f8f9fa;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .remove-btn {
+    padding: 5px 10px;
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8em;
+    transition: background-color 0.3s ease;
+  }
+
+  .remove-btn:hover {
+    background-color: #c82333;
+  }
+
+  .character-count {
+    display: block;
+    text-align: right;
+    color: #666;
+    font-size: 0.8em;
+    margin-top: 5px;
+  }
+
+  .logo-size-value {
+    display: inline-block;
+    margin-left: 10px;
+    font-weight: bold;
+    color: #007bff;
+  }
+
+  .checkbox-group {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+  }
+
+  .checkbox-label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-weight: normal;
+  }
+
+  .checkbox-label input {
+    margin-right: 8px;
+  }
+
+  .position-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+  }
+
+  .personalizer-preview {
+    background-color: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  }
+
+  .personalizer-preview h4 {
+    margin: 0 0 15px 0;
+    font-size: 1.1em;
+    color: #333;
+  }
+
+  .preview-canvas {
+    position: relative;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: #f9f9f9;
+  }
+
+  .canvas-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+
+  .preview-text {
+    font-size: 1.2em;
+    text-align: center;
+    padding: 20px;
+    max-width: 90%;
+    word-wrap: break-word;
+  }
+
+  .download-btn {
+    margin-top: 15px;
+    padding: 10px 20px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background-color 0.3s ease;
+  }
+
+  .download-btn:hover {
+    background-color: #0056b3;
+  }
+
+  .personalization-price {
+    margin-top: 20px;
+    padding: 15px;
+    background: linear-gradient(135deg, #e8f5e8 0%, #d4edda 100%);
+    border-radius: 8px;
+    text-align: center;
+    border: 1px solid #c3e6cb;
+  }
+
+  @media (max-width: 768px) {
+    .personalizer-container {
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+    
+    .advanced-personalizer {
+      margin: 15px 0;
+      padding: 15px;
+    }
+    
+    .position-controls {
+      grid-template-columns: 1fr;
+    }
+    
+    .checkbox-group {
+      flex-direction: column;
+      gap: 10px;
+    }
+  }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const blockId = '{{ block.id }}';
+    const form = document.querySelector(`[data-block-id="${blockId}"] .personalizer-form`);
+    const canvas = document.getElementById(`canvas-${blockId}`);
+    const ctx = canvas ? canvas.getContext('2d') : null;
+    const previewText = document.getElementById(`preview-text-${blockId}`);
+    const previewLogo = document.getElementById(`preview-logo-${blockId}`);
+    const logoDisplay = document.getElementById(`logo-display-${blockId}`);
+    const hiddenInput = document.getElementById(`personalization-data-${blockId}`);
+    const downloadBtn = document.getElementById(`download-btn-${blockId}`);
+
+    let customizationData = {
+      name: '',
+      textFields: {},
+      fontFamily: 'Arial',
+      fontSize: 18,
+      fontBold: false,
+      fontItalic: false,
+      fontUnderline: false,
+      textColor: '#000000',
+      backgroundColor: '#ffffff',
+      textAlign: 'center',
+      verticalAlign: 'middle',
+      customLogo: null,
+      backgroundImage: null,
+      logoSize: 100,
+      textXPosition: 500,
+      textYPosition: 500,
+      logoXPosition: 500,
+      logoYPosition: 800
+    };
+
+    function updatePreview() {
+      if (!previewText) return;
+
+      // Get name field value (priority display in center)
+      const nameInput = form.querySelector('input[data-field-type="name"]');
+      const nameText = nameInput ? nameInput.value.trim() : '';
+
+      // Collect additional text field values
+      const textInputs = form.querySelectorAll('input[data-field-type="text"]');
+      let additionalText = '';
+      textInputs.forEach(input => {
+        if (input.value.trim()) {
+          additionalText += input.value.trim() + ' ';
+        }
+      });
+
+      // Prioritize name text for center display
+      let displayText = nameText || additionalText.trim();
+      if (!displayText) {
+        displayText = '{{ block.settings.preview_placeholder | default: "Your customization will appear here" }}';
+      }
+
+      // Apply styles
+      const fontFamily = form.querySelector('select[name="font_family"]')?.value || 'Arial';
+      const fontSize = form.querySelector('input[name="font_size"]')?.value || 18;
+      const textColor = form.querySelector('input[name="text_color"]')?.value || '#000000';
+      const backgroundColor = form.querySelector('input[name="background_color"]')?.value || '#ffffff';
+      const textAlign = form.querySelector('select[name="text_align"]')?.value || 'center';
+      const verticalAlign = form.querySelector('select[name="vertical_align"]')?.value || 'middle';
+      
+      const fontBold = form.querySelector('input[name="font_bold"]')?.checked || false;
+      const fontItalic = form.querySelector('input[name="font_italic"]')?.checked || false;
+      const fontUnderline = form.querySelector('input[name="font_underline"]')?.checked || false;
+
+      // Update preview text with positioning
+      previewText.textContent = displayText;
+      previewText.style.fontFamily = fontFamily;
+      previewText.style.fontSize = fontSize + 'px';
+      previewText.style.color = textColor;
+      previewText.style.fontWeight = fontBold ? 'bold' : 'normal';
+      previewText.style.fontStyle = fontItalic ? 'italic' : 'normal';
+      previewText.style.textDecoration = fontUnderline ? 'underline' : 'none';
+      
+      // Apply text positioning (convert pixels to percentage for canvas)
+      const textX = form.querySelector('input[name="text_x_position"]')?.value || 500;
+      const textY = form.querySelector('input[name="text_y_position"]')?.value || 500;
+      
+      previewText.style.position = 'absolute';
+      previewText.style.left = (textX / 1000 * 100) + '%';
+      previewText.style.top = (textY / 1000 * 100) + '%';
+      previewText.style.transform = 'translate(-50%, -50%)';
+      previewText.style.zIndex = '10';
+      
+      customizationData.textXPosition = parseInt(textX);
+      customizationData.textYPosition = parseInt(textY);
+
+      // Update canvas background
+      if (canvas && ctx) {
+        // Clear canvas first
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw product image as background first
+        const productImg = document.getElementById(`product-bg-img-${blockId}`);
+        if (productImg && productImg.complete) {
+          ctx.drawImage(productImg, 0, 0, canvas.width, canvas.height);
+        }
+        
+        // Draw custom background image if available (overlays product image)
+        if (customizationData.backgroundImage) {
+          const img = new Image();
+          img.onload = function() {
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          };
+          img.src = customizationData.backgroundImage;
+        } else {
+          // Set background color if no custom background image
+          canvas.style.backgroundColor = backgroundColor;
+        }
+      }
+
+
+      // Update logo display with positioning
+      if (logoDisplay && customizationData.customLogo) {
+        logoDisplay.src = customizationData.customLogo;
+        const logoSize = form.querySelector('input[name="logo_size"]')?.value || 100;
+        logoDisplay.style.maxWidth = logoSize + 'px';
+        logoDisplay.style.maxHeight = logoSize + 'px';
+        
+        // Apply logo positioning (convert pixels to percentage for canvas)
+        const logoX = form.querySelector('input[name="logo_x_position"]')?.value || 500;
+        const logoY = form.querySelector('input[name="logo_y_position"]')?.value || 800;
+        
+        if (previewLogo) {
+          previewLogo.style.display = 'block';
+          previewLogo.style.position = 'absolute';
+          previewLogo.style.left = (logoX / 1000 * 100) + '%';
+          previewLogo.style.top = (logoY / 1000 * 100) + '%';
+          previewLogo.style.transform = 'translate(-50%, -50%)';
+          previewLogo.style.zIndex = '10';
+        }
+        
+        customizationData.logoXPosition = parseInt(logoX);
+        customizationData.logoYPosition = parseInt(logoY);
+      } else if (previewLogo) {
+        previewLogo.style.display = 'none';
+      }
+
+      // Update character count for name field
+      if (nameInput) {
+        const currentCount = form.querySelector('.current-count');
+        if (currentCount) {
+          currentCount.textContent = nameInput.value.length;
+        }
+      }
+
+      // Update customization data
+      customizationData = {
+        ...customizationData,
+        name: nameText,
+        fontFamily,
+        fontSize: parseInt(fontSize),
+        fontBold,
+        fontItalic,
+        fontUnderline,
+        textColor,
+        backgroundColor,
+        textAlign,
+        verticalAlign,
+        displayText: displayText,
+        logoSize: parseInt(form.querySelector('input[name="logo_size"]')?.value || 100)
+      };
+
+      // Update hidden input
+      if (hiddenInput) {
+        hiddenInput.value = JSON.stringify({
+          ...customizationData,
+          timestamp: new Date().toISOString()
+        });
+      }
+    }
+
+    function updateRangeValue() {
+      const fontSizeInput = form.querySelector('input[name="font_size"]');
+      const rangeValue = form.querySelector('.range-value');
+      if (fontSizeInput && rangeValue) {
+        rangeValue.textContent = fontSizeInput.value + 'px';
+      }
+    }
+
+    // Event listeners
+    form.addEventListener('input', updatePreview);
+    form.addEventListener('change', updatePreview);
+
+    const fontSizeInput = form.querySelector('input[name="font_size"]');
+    if (fontSizeInput) {
+      fontSizeInput.addEventListener('input', updateRangeValue);
+    }
+
+    // Logo upload handler
+    const logoUpload = form.querySelector('input[name="custom_logo"]');
+    if (logoUpload) {
+      logoUpload.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            customizationData.customLogo = e.target.result;
+            
+            // Show logo preview
+            const logoPreview = document.getElementById(`logo-preview-${blockId}`);
+            const logoPreviewImg = document.getElementById(`logo-preview-img-${blockId}`);
+            if (logoPreview && logoPreviewImg) {
+              logoPreviewImg.src = e.target.result;
+              logoPreview.style.display = 'flex';
+            }
+            
+            updatePreview();
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+    }
+
+    // Background image upload handler
+    const backgroundUpload = form.querySelector('input[name="background_image"]');
+    if (backgroundUpload) {
+      backgroundUpload.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            customizationData.backgroundImage = e.target.result;
+            
+            // Show background preview
+            const backgroundPreview = document.getElementById(`background-preview-${blockId}`);
+            const backgroundPreviewImg = document.getElementById(`background-preview-img-${blockId}`);
+            if (backgroundPreview && backgroundPreviewImg) {
+              backgroundPreviewImg.src = e.target.result;
+              backgroundPreview.style.display = 'flex';
+            }
+            
+            updatePreview();
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+    }
+
+    // Legacy image upload handler
+    const imageUpload = form.querySelector('input[name="custom_image"]');
+    if (imageUpload) {
+      imageUpload.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            customizationData.customImage = e.target.result;
+            updatePreview();
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+    }
+
+    // Remove button handlers
+    const removeBtns = form.querySelectorAll('.remove-btn');
+    removeBtns.forEach(btn => {
+      btn.addEventListener('click', function() {
+        const removeType = this.getAttribute('data-remove');
+        if (removeType === 'logo') {
+          customizationData.customLogo = null;
+          const logoPreview = document.getElementById(`logo-preview-${blockId}`);
+          const logoUploadInput = document.getElementById(`logo-upload-${blockId}`);
+          if (logoPreview) logoPreview.style.display = 'none';
+          if (logoUploadInput) logoUploadInput.value = '';
+        } else if (removeType === 'background') {
+          customizationData.backgroundImage = null;
+          const backgroundPreview = document.getElementById(`background-preview-${blockId}`);
+          const backgroundUploadInput = document.getElementById(`background-upload-${blockId}`);
+          if (backgroundPreview) backgroundPreview.style.display = 'none';
+          if (backgroundUploadInput) backgroundUploadInput.value = '';
+        }
+        updatePreview();
+      });
+    });
+
+    // Logo size handler
+    const logoSizeInput = form.querySelector('input[name="logo_size"]');
+    if (logoSizeInput) {
+      logoSizeInput.addEventListener('input', function() {
+        const logoSizeValue = form.querySelector('.logo-size-value');
+        if (logoSizeValue) {
+          logoSizeValue.textContent = this.value + 'px';
+        }
+        updatePreview();
+      });
+    }
+
+    // Text positioning handlers
+    const textXInput = form.querySelector('input[name="text_x_position"]');
+    if (textXInput) {
+      textXInput.addEventListener('input', function() {
+        const textXValue = form.querySelector('.text-x-value');
+        if (textXValue) {
+          textXValue.textContent = this.value + 'px';
+        }
+        updatePreview();
+      });
+    }
+
+    const textYInput = form.querySelector('input[name="text_y_position"]');
+    if (textYInput) {
+      textYInput.addEventListener('input', function() {
+        const textYValue = form.querySelector('.text-y-value');
+        if (textYValue) {
+          textYValue.textContent = this.value + 'px';
+        }
+        updatePreview();
+      });
+    }
+
+    // Logo positioning handlers
+    const logoXInput = form.querySelector('input[name="logo_x_position"]');
+    if (logoXInput) {
+      logoXInput.addEventListener('input', function() {
+        const logoXValue = form.querySelector('.logo-x-value');
+        if (logoXValue) {
+          logoXValue.textContent = this.value + 'px';
+        }
+        updatePreview();
+      });
+    }
+
+    const logoYInput = form.querySelector('input[name="logo_y_position"]');
+    if (logoYInput) {
+      logoYInput.addEventListener('input', function() {
+        const logoYValue = form.querySelector('.logo-y-value');
+        if (logoYValue) {
+          logoYValue.textContent = this.value + 'px';
+        }
+        updatePreview();
+      });
+    }
+
+    // Download functionality
+    if (downloadBtn && canvas) {
+      downloadBtn.addEventListener('click', function() {
+        const link = document.createElement('a');
+        link.download = 'customization-preview.png';
+        link.href = canvas.toDataURL();
+        link.click();
+      });
+    }
+
+    // Add to cart integration
+    const addToCartForm = document.querySelector('form[action*="/cart/add"]');
+    if (addToCartForm) {
+      addToCartForm.addEventListener('submit', function(e) {
+        const personalizationData = hiddenInput ? hiddenInput.value : '';
+        if (personalizationData) {
+          const hiddenProperty = document.createElement('input');
+          hiddenProperty.type = 'hidden';
+          hiddenProperty.name = 'properties[Advanced_Personalization]';
+          hiddenProperty.value = personalizationData;
+          addToCartForm.appendChild(hiddenProperty);
+        }
+      });
+    }
+
+    // Initial update
+    updatePreview();
+    updateRangeValue();
+  });
+</script>
+
+{% schema %}
+{
+  "name": "Advanced Personalizer",
+  "target": "section",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "show_title",
+      "label": "Show title",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_name_field",
+      "label": "Enable name field",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_font_options",
+      "label": "Enable font options",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_color_options",
+      "label": "Enable color options",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_logo_upload",
+      "label": "Enable logo upload",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_preview",
+      "label": "Show preview",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_position_controls",
+      "label": "Enable text positioning controls",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_logo_positioning",
+      "label": "Enable logo positioning controls",
+      "default": true
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,369 @@
+{% comment %}
+  Basic Product Personalizer Block
+  This block allows customers to add simple text personalization to products
+{% endcomment %}
+
+<div class="product-personalizer" data-block-id="{{ block.id }}">
+  {% if block.settings.show_title %}
+    <h3 class="personalizer-title">{{ block.settings.title | default: 'Personalize Your Product' }}</h3>
+  {% endif %}
+
+  {% if block.settings.description != blank %}
+    <div class="personalizer-description">
+      {{ block.settings.description }}
+    </div>
+  {% endif %}
+
+  <form class="personalizer-form" data-product-id="{{ product.id }}">
+    {% comment %} Text Input Field {% endcomment %}
+    {% if block.settings.enable_text_input %}
+      <div class="personalizer-field">
+        <label for="custom-text-{{ block.id }}">
+          {{ block.settings.text_label | default: 'Custom Text' }}
+          {% if block.settings.text_required %}*{% endif %}
+        </label>
+        <input 
+          type="text" 
+          id="custom-text-{{ block.id }}"
+          name="custom_text"
+          placeholder="{{ block.settings.text_placeholder }}"
+          maxlength="{{ block.settings.text_max_length | default: 50 }}"
+          {% if block.settings.text_required %}required{% endif %}
+          class="personalizer-input"
+        >
+        <small class="character-count">
+          <span class="current-count">0</span>/{{ block.settings.text_max_length | default: 50 }}
+        </small>
+      </div>
+    {% endif %}
+
+    {% comment %} Font Selection {% endcomment %}
+    {% if block.settings.enable_font_selection %}
+      <div class="personalizer-field">
+        <label for="font-select-{{ block.id }}">
+          {{ block.settings.font_label | default: 'Font Style' }}
+        </label>
+        <select id="font-select-{{ block.id }}" name="font_family" class="personalizer-select">
+          <option value="Arial">Arial</option>
+          <option value="Helvetica">Helvetica</option>
+          <option value="Times New Roman">Times New Roman</option>
+          <option value="Georgia">Georgia</option>
+          <option value="Courier New">Courier New</option>
+        </select>
+      </div>
+    {% endif %}
+
+    {% comment %} Color Selection {% endcomment %}
+    {% if block.settings.enable_color_selection %}
+      <div class="personalizer-field">
+        <label for="color-select-{{ block.id }}">
+          {{ block.settings.color_label | default: 'Text Color' }}
+        </label>
+        <div class="color-options">
+          {% assign colors = 'Black,White,Red,Blue,Green,Yellow,Purple,Orange' | split: ',' %}
+          {% for color in colors %}
+            <label class="color-option">
+              <input 
+                type="radio" 
+                name="text_color" 
+                value="{{ color | downcase }}"
+                {% if forloop.first %}checked{% endif %}
+              >
+              <span class="color-swatch" style="background-color: {{ color | downcase }};"></span>
+              <span class="color-name">{{ color }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
+    {% comment %} Preview Area {% endcomment %}
+    {% if block.settings.show_preview %}
+      <div class="personalizer-preview">
+        <h4>{{ block.settings.preview_title | default: 'Preview' }}</h4>
+        <div class="preview-area" id="preview-{{ block.id }}">
+          {% comment %} Product Image Background {% endcomment %}
+          {% if product.featured_image %}
+            <div class="product-image-background" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;">
+              <img
+                src="{{ product.featured_image | img_url: '400x400' }}"
+                alt="{{ product.featured_image.alt | default: product.title }}"
+                width="400"
+                height="400"
+                style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;"
+                id="product-preview-img-{{ block.id }}"
+              >
+            </div>
+          {% endif %}
+          <span class="preview-text" style="font-family: Arial; color: black; position: relative; z-index: 10;">
+            {{ block.settings.preview_placeholder | default: 'Your text will appear here' }}
+          </span>
+        </div>
+      </div>
+    {% endif %}
+
+    {% comment %} Price Addition {% endcomment %}
+    {% if block.settings.personalization_price > 0 %}
+      <div class="personalization-price">
+        <strong>
+          Personalization: +{{ block.settings.personalization_price | money }}
+        </strong>
+      </div>
+    {% endif %}
+
+    <input type="hidden" name="personalization_data" id="personalization-data-{{ block.id }}">
+  </form>
+</div>
+
+<style>
+  .product-personalizer {
+    margin: 20px 0;
+    padding: 20px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background-color: #fafafa;
+  }
+
+  .personalizer-title {
+    margin: 0 0 15px 0;
+    font-size: 1.2em;
+    font-weight: bold;
+  }
+
+  .personalizer-description {
+    margin-bottom: 15px;
+    color: #666;
+    font-size: 0.9em;
+  }
+
+  .personalizer-field {
+    margin-bottom: 15px;
+  }
+
+  .personalizer-field label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    font-size: 0.9em;
+  }
+
+  .personalizer-input,
+  .personalizer-select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1em;
+  }
+
+  .character-count {
+    display: block;
+    text-align: right;
+    color: #666;
+    font-size: 0.8em;
+    margin-top: 5px;
+  }
+
+  .color-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .color-option {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+  }
+
+  .color-option:hover {
+    background-color: #f0f0f0;
+  }
+
+  .color-option input[type="radio"] {
+    margin-right: 8px;
+  }
+
+  .color-swatch {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid #ccc;
+    margin-right: 8px;
+  }
+
+  .color-name {
+    font-size: 0.9em;
+  }
+
+  .personalizer-preview {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+  }
+
+  .personalizer-preview h4 {
+    margin: 0 0 10px 0;
+    font-size: 1em;
+  }
+
+  .preview-area {
+    min-height: 200px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f9f9f9;
+    border: 1px dashed #ccc;
+    border-radius: 4px;
+    padding: 20px;
+    overflow: hidden;
+  }
+
+  .preview-text {
+    font-size: 1.2em;
+    text-align: center;
+  }
+
+  .personalization-price {
+    margin-top: 15px;
+    padding: 10px;
+    background-color: #e8f5e8;
+    border-radius: 4px;
+    text-align: center;
+  }
+
+  @media (max-width: 768px) {
+    .product-personalizer {
+      margin: 15px 0;
+      padding: 15px;
+    }
+    
+    .color-options {
+      justify-content: center;
+    }
+  }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const blockId = '{{ block.id }}';
+    const form = document.querySelector(`[data-block-id="${blockId}"] .personalizer-form`);
+    const textInput = document.getElementById(`custom-text-${blockId}`);
+    const fontSelect = document.getElementById(`font-select-${blockId}`);
+    const colorInputs = form.querySelectorAll('input[name="text_color"]');
+    const previewText = document.querySelector(`#preview-${blockId} .preview-text`);
+    const currentCount = form.querySelector('.current-count');
+    const hiddenInput = document.getElementById(`personalization-data-${blockId}`);
+
+    function updatePreview() {
+      if (!previewText) return;
+
+      const text = textInput ? textInput.value || '{{ block.settings.preview_placeholder | default: "Your text will appear here" }}' : previewText.textContent;
+      const font = fontSelect ? fontSelect.value : 'Arial';
+      const color = form.querySelector('input[name="text_color"]:checked')?.value || 'black';
+
+      previewText.textContent = text;
+      previewText.style.fontFamily = font;
+      previewText.style.color = color;
+
+      // Update hidden input with personalization data
+      const data = {
+        text: textInput ? textInput.value : '',
+        font: font,
+        color: color,
+        timestamp: new Date().toISOString()
+      };
+      
+      if (hiddenInput) {
+        hiddenInput.value = JSON.stringify(data);
+      }
+    }
+
+    function updateCharacterCount() {
+      if (textInput && currentCount) {
+        currentCount.textContent = textInput.value.length;
+      }
+    }
+
+    // Event listeners
+    if (textInput) {
+      textInput.addEventListener('input', function() {
+        updateCharacterCount();
+        updatePreview();
+      });
+    }
+
+    if (fontSelect) {
+      fontSelect.addEventListener('change', updatePreview);
+    }
+
+    colorInputs.forEach(input => {
+      input.addEventListener('change', updatePreview);
+    });
+
+    // Initial update
+    updatePreview();
+    updateCharacterCount();
+
+    // Add to cart integration
+    const addToCartForm = document.querySelector('form[action*="/cart/add"]');
+    if (addToCartForm) {
+      addToCartForm.addEventListener('submit', function(e) {
+        const personalizationData = hiddenInput ? hiddenInput.value : '';
+        if (personalizationData) {
+          // Add personalization data as a line item property
+          const hiddenProperty = document.createElement('input');
+          hiddenProperty.type = 'hidden';
+          hiddenProperty.name = 'properties[Personalization]';
+          hiddenProperty.value = personalizationData;
+          addToCartForm.appendChild(hiddenProperty);
+        }
+      });
+    }
+  });
+</script>
+
+{% schema %}
+{
+  "name": "Product Personalizer",
+  "target": "section",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "show_title",
+      "label": "Show title",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_text_input",
+      "label": "Enable text input",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_font_selection",
+      "label": "Enable font selection",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_color_selection",
+      "label": "Enable color selection",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_preview",
+      "label": "Show preview",
+      "default": true
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,14 @@
+type = "theme"
+name = "Product Customization Extension"
+
+[[blocks]]
+name = "Auto Personalizer"
+target = "section"
+
+[[blocks]]
+name = "Advanced Personalizer"
+target = "section"
+
+[[blocks]]
+name = "Product Personalizer"
+target = "section"

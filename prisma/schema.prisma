@@ -1,0 +1,86 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:dev.db"
+}
+
+model Session {
+  id          String    @id
+  shop        String
+  state       String
+  isOnline    Boolean   @default(false)
+  scope       String?
+  expires     DateTime?
+  accessToken String
+  userId      BigInt?
+  firstName   String?
+  lastName    String?
+  email       String?
+  accountOwner Boolean  @default(false)
+  locale      String?
+  collaborator Boolean? @default(false)
+  emailVerified Boolean? @default(false)
+}
+
+model OptionSet {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  fields      String   // JSON string containing field definitions
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  productOptionSets ProductOptionSet[]
+  
+  @@map("option_sets")
+}
+
+model ProductOptionSet {
+  id           String   @id @default(cuid())
+  productId    String   // Shopify product ID
+  productTitle String?  // Cache product title for display
+  productHandle String? // Cache product handle
+  optionSetId  String
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  // Relations
+  optionSet OptionSet @relation(fields: [optionSetId], references: [id], onDelete: Cascade)
+  
+  // Ensure unique product-optionset combination
+  @@unique([productId, optionSetId])
+  @@map("product_option_sets")
+}
+
+model CustomerPersonalization {
+  id           String   @id @default(cuid())
+  productId    String
+  optionSetId  String
+  customerData String?  // JSON string containing customer input
+  orderId      String?  // Link to Shopify order if applicable
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@map("customer_personalizations")
+}
+
+model Analytics {
+  id                    String   @id @default(cuid())
+  templateId            String
+  productId             String
+  customizationCount    Int      @default(0)
+  conversionRate        Float    @default(0.0)
+  averageOrderValue     Float    @default(0.0)
+  date                  DateTime @default(now())
+  
+  @@map("analytics")
+}

@@ -1,0 +1,599 @@
+{% comment %}
+  Auto Product Personalizer Block
+  Automatically renders saved customization templates for products
+  This block checks if a product has customization options and displays them
+{% endcomment %}
+
+{% assign product_id = product.id | remove: 'gid://shopify/Product/' %}
+{% assign has_customization = false %}
+
+<!-- Check if this product has customization enabled -->
+<script>
+  // Check if product has customization options via app API
+  fetch('/api/product-options?productId={{ product_id }}')
+    .then(response => response.json())
+    .then(data => {
+      if (data.hasOptions) {
+        document.getElementById('auto-personalizer-{{ block.id }}').style.display = 'block';
+        initializeProductCustomizer('{{ product_id }}', '{{ block.id }}', data.template);
+      }
+    })
+    .catch(error => console.log('Customization check failed:', error));
+</script>
+
+<div id="auto-personalizer-{{ block.id }}" class="auto-product-personalizer" style="display: none;" data-product-id="{{ product_id }}">
+  <div class="personalizer-header">
+    <h3 class="personalizer-title">
+      🎨 Customize Your {{ product.title }}
+    </h3>
+    <p class="personalizer-subtitle">
+      Make it uniquely yours with personalized text and images!
+    </p>
+  </div>
+
+  <div class="personalizer-container">
+    <!-- Dynamic content will be loaded here -->
+    <div id="customizer-content-{{ block.id }}" class="customizer-content">
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <p>Loading customization options...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .auto-product-personalizer {
+    margin: 30px 0;
+    padding: 25px;
+    border: 2px solid #ff6b35;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #fff8f5 0%, #fff 100%);
+    box-shadow: 0 4px 15px rgba(255, 107, 53, 0.1);
+  }
+
+  .personalizer-header {
+    text-align: center;
+    margin-bottom: 25px;
+  }
+
+  .personalizer-title {
+    margin: 0 0 10px 0;
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #ff6b35;
+  }
+
+  .personalizer-subtitle {
+    margin: 0;
+    color: #666;
+    font-size: 1em;
+    font-style: italic;
+  }
+
+  .customizer-content {
+    min-height: 200px;
+  }
+
+  .loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    color: #666;
+  }
+
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #ff6b35;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 15px;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  /* Dynamic customizer styles */
+  .dynamic-personalizer {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    align-items: start;
+  }
+
+  .customizer-controls {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+
+  .customizer-preview {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    text-align: center;
+  }
+
+  .field-group {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+  }
+
+  .field-group h4 {
+    margin: 0 0 15px 0;
+    font-size: 1.1em;
+    color: #ff6b35;
+    font-weight: bold;
+    border-bottom: 2px solid #ff6b35;
+    padding-bottom: 5px;
+  }
+
+  .personalizer-field {
+    margin-bottom: 15px;
+  }
+
+  .personalizer-field label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #333;
+  }
+
+  .personalizer-input,
+  .personalizer-select {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    font-size: 1em;
+    transition: border-color 0.3s ease;
+  }
+
+  .personalizer-input:focus,
+  .personalizer-select:focus {
+    outline: none;
+    border-color: #ff6b35;
+    box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+  }
+
+  .preview-canvas {
+    position: relative;
+    width: 100%;
+    max-width: 400px;
+    aspect-ratio: 1;
+    border: 2px solid #ff6b35;
+    border-radius: 8px;
+    background: #f9f9f9;
+    margin: 0 auto;
+    overflow: hidden;
+  }
+
+  .canvas-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+  }
+
+  .preview-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+    color: #333;
+    font-weight: bold;
+    font-size: 18px;
+    text-align: center;
+    max-width: 90%;
+    word-wrap: break-word;
+  }
+
+  .preview-logo {
+    position: absolute;
+    bottom: 10%;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    display: none;
+  }
+
+  .logo-display {
+    max-width: 80px;
+    max-height: 80px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+
+  .add-to-cart-section {
+    margin-top: 25px;
+    padding: 20px;
+    background: linear-gradient(135deg, #e8f5e8 0%, #d4edda 100%);
+    border-radius: 8px;
+    border: 1px solid #c3e6cb;
+    text-align: center;
+  }
+
+  .customization-price {
+    margin-bottom: 15px;
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #28a745;
+  }
+
+  .add-to-cart-btn {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    border-radius: 8px;
+    font-size: 1.1em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+  }
+
+  .add-to-cart-btn:hover {
+    background: linear-gradient(135deg, #218838 0%, #1e7e34 100%);
+    transform: translateY(-2px);
+  }
+
+  @media (max-width: 768px) {
+    .auto-product-personalizer {
+      margin: 20px 0;
+      padding: 20px;
+    }
+    
+    .dynamic-personalizer {
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+    
+    .personalizer-title {
+      font-size: 1.3em;
+    }
+  }
+</style>
+
+<script>
+  function initializeProductCustomizer(productId, blockId, template) {
+    const container = document.getElementById(`customizer-content-${blockId}`);
+    
+    if (!template || !template.elements) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 40px; color: #666;">
+          <p>No customization template found for this product.</p>
+          <p>Please contact the store owner to set up customization options.</p>
+        </div>
+      `;
+      return;
+    }
+
+    // Build dynamic customizer based on template
+    let customizationData = {
+      productId: productId,
+      elements: {},
+      timestamp: new Date().toISOString()
+    };
+
+    let controlsHTML = '<div class="customizer-controls"><form class="personalizer-form">';
+    let hasTextFields = false;
+    let hasUploadFields = false;
+
+    // Generate form fields based on template elements
+    template.elements.forEach((element, index) => {
+      if (element.type === 'text' || element.type === 'singletext') {
+        if (!hasTextFields) {
+          controlsHTML += '<div class="field-group"><h4>✨ Text Personalization</h4>';
+          hasTextFields = true;
+        }
+        
+        controlsHTML += `
+          <div class="personalizer-field">
+            <label for="element-${element.id}">
+              ${element.properties.placeholder || (element.type === 'singletext' ? 'Single Line Text' : 'Multi Line Text')}
+              ${element.properties.required ? '*' : ''}
+            </label>
+            <${element.type === 'singletext' ? 'input' : 'textarea'}
+              type="text"
+              id="element-${element.id}"
+              name="element_${element.id}"
+              placeholder="${element.properties.placeholder || 'Enter your text...'}"
+              maxlength="${element.properties.maxLength || 50}"
+              ${element.properties.required ? 'required' : ''}
+              class="personalizer-input"
+              data-element-id="${element.id}"
+              data-element-type="${element.type}"
+            ${element.type === 'singletext' ? '>' : '></textarea>'}
+            <small class="character-count">
+              <span class="current-count-${element.id}">0</span>/${element.properties.maxLength || 50}
+            </small>
+          </div>
+        `;
+      } else if (element.type === 'upload') {
+        if (!hasUploadFields) {
+          if (hasTextFields) controlsHTML += '</div>';
+          controlsHTML += '<div class="field-group"><h4>📷 Image Upload</h4>';
+          hasUploadFields = true;
+        }
+        
+        controlsHTML += `
+          <div class="personalizer-field">
+            <label for="upload-${element.id}">Upload Your Image</label>
+            <input
+              type="file"
+              id="upload-${element.id}"
+              name="upload_${element.id}"
+              accept="image/*"
+              class="personalizer-input"
+              data-element-id="${element.id}"
+              data-element-type="upload"
+            >
+            <small>Supported: JPG, PNG, GIF. Max size: 5MB.</small>
+            <div class="upload-preview-${element.id}" style="display: none; margin-top: 10px;">
+              <img id="preview-img-${element.id}" src="" alt="Preview" style="max-width: 100px; max-height: 100px; border-radius: 4px;">
+              <button type="button" onclick="removeUpload('${element.id}')" style="margin-left: 10px; padding: 5px 10px; background: #dc3545; color: white; border: none; border-radius: 4px;">Remove</button>
+            </div>
+          </div>
+        `;
+      }
+    });
+
+    if (hasTextFields || hasUploadFields) {
+      controlsHTML += '</div>';
+    }
+
+    controlsHTML += `
+      <input type="hidden" name="customization_data" id="customization-data-${blockId}">
+      </form></div>
+    `;
+
+    // Preview HTML with product image background
+    const previewHTML = `
+      <div class="customizer-preview">
+        <h4>🔥 Live Preview</h4>
+        <div class="preview-canvas" id="preview-canvas-${blockId}">
+          <div class="canvas-overlay">
+            {% if product.featured_image %}
+            <div class="product-image-background" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;">
+              <img
+                src="{{ product.featured_image | img_url: '400x400' }}"
+                alt="{{ product.featured_image.alt | default: product.title }}"
+                width="400"
+                height="400"
+                style="width: 100%; height: 100%; object-fit: cover; border-radius: 6px;"
+                id="product-preview-img-${blockId}"
+              >
+            </div>
+            {% endif %}
+            <div class="preview-text" id="preview-text-${blockId}" style="position: relative; z-index: 10;">
+              Your customization will appear here
+            </div>
+            <div class="preview-logo" id="preview-logo-${blockId}" style="position: relative; z-index: 10;">
+              <img id="logo-display-${blockId}" src="" alt="Custom image" class="logo-display">
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Add to cart section
+    const addToCartHTML = `
+      <div class="add-to-cart-section">
+        ${template.additionalCharge > 0 ? `<div class="customization-price">Customization: +₹${template.additionalCharge}</div>` : ''}
+        <button type="button" class="add-to-cart-btn" onclick="addCustomizedProductToCart('${productId}', '${blockId}')">
+          🛒 Add Customized Product to Cart
+        </button>
+      </div>
+    `;
+
+    // Combine all HTML
+    container.innerHTML = `
+      <div class="dynamic-personalizer">
+        ${controlsHTML}
+        ${previewHTML}
+      </div>
+      ${addToCartHTML}
+    `;
+
+    // Initialize event listeners
+    initializeCustomizerEvents(blockId, template);
+  }
+
+  function initializeCustomizerEvents(blockId, template) {
+    const form = document.querySelector(`#customizer-content-${blockId} .personalizer-form`);
+    if (!form) return;
+
+    // Add event listeners for all inputs
+    form.addEventListener('input', function(e) {
+      updateLivePreview(blockId, template);
+      updateCharacterCounts(blockId);
+    });
+
+    form.addEventListener('change', function(e) {
+      if (e.target.type === 'file') {
+        handleFileUpload(e, blockId);
+      }
+      updateLivePreview(blockId, template);
+    });
+
+    // Initial preview update
+    updateLivePreview(blockId, template);
+  }
+
+  function updateLivePreview(blockId, template) {
+    const previewText = document.getElementById(`preview-text-${blockId}`);
+    const form = document.querySelector(`#customizer-content-${blockId} .personalizer-form`);
+    
+    if (!previewText || !form) return;
+
+    // Collect all text inputs
+    let displayText = '';
+    const textInputs = form.querySelectorAll('input[data-element-type="text"], textarea[data-element-type="text"], input[data-element-type="singletext"]');
+    
+    textInputs.forEach(input => {
+      if (input.value.trim()) {
+        displayText += input.value.trim() + ' ';
+      }
+    });
+
+    previewText.textContent = displayText.trim() || 'Your customization will appear here';
+
+    // Update hidden input with customization data
+    const hiddenInput = document.getElementById(`customization-data-${blockId}`);
+    if (hiddenInput) {
+      const customizationData = {
+        productId: form.closest('[data-product-id]').getAttribute('data-product-id'),
+        elements: {},
+        timestamp: new Date().toISOString()
+      };
+
+      // Collect all form data
+      const formData = new FormData(form);
+      for (let [key, value] of formData.entries()) {
+        if (key.startsWith('element_') || key.startsWith('upload_')) {
+          customizationData.elements[key] = value;
+        }
+      }
+
+      hiddenInput.value = JSON.stringify(customizationData);
+    }
+  }
+
+  function updateCharacterCounts(blockId) {
+    const form = document.querySelector(`#customizer-content-${blockId} .personalizer-form`);
+    if (!form) return;
+
+    const textInputs = form.querySelectorAll('input[data-element-type="text"], textarea[data-element-type="text"], input[data-element-type="singletext"]');
+    
+    textInputs.forEach(input => {
+      const elementId = input.getAttribute('data-element-id');
+      const currentCount = document.querySelector(`.current-count-${elementId}`);
+      if (currentCount) {
+        currentCount.textContent = input.value.length;
+      }
+    });
+  }
+
+  function handleFileUpload(event, blockId) {
+    const file = event.target.files[0];
+    const elementId = event.target.getAttribute('data-element-id');
+    
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert('File size must be less than 5MB');
+        event.target.value = '';
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const previewContainer = document.querySelector(`.upload-preview-${elementId}`);
+        const previewImg = document.getElementById(`preview-img-${elementId}`);
+        const logoDisplay = document.getElementById(`logo-display-${blockId}`);
+        const previewLogo = document.getElementById(`preview-logo-${blockId}`);
+        
+        if (previewContainer && previewImg) {
+          previewImg.src = e.target.result;
+          previewContainer.style.display = 'block';
+        }
+        
+        if (logoDisplay && previewLogo) {
+          logoDisplay.src = e.target.result;
+          previewLogo.style.display = 'block';
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  function removeUpload(elementId) {
+    const fileInput = document.getElementById(`upload-${elementId}`);
+    const previewContainer = document.querySelector(`.upload-preview-${elementId}`);
+    
+    if (fileInput) fileInput.value = '';
+    if (previewContainer) previewContainer.style.display = 'none';
+    
+    // Hide logo in preview
+    const previewLogo = document.querySelector('.preview-logo');
+    if (previewLogo) previewLogo.style.display = 'none';
+  }
+
+  function addCustomizedProductToCart(productId, blockId) {
+    const hiddenInput = document.getElementById(`customization-data-${blockId}`);
+    const customizationData = hiddenInput ? hiddenInput.value : '';
+    
+    if (!customizationData) {
+      alert('Please add some customization before adding to cart.');
+      return;
+    }
+
+    // Find the main add to cart form
+    const addToCartForm = document.querySelector('form[action*="/cart/add"]');
+    if (addToCartForm) {
+      // Add customization data as line item property
+      const hiddenProperty = document.createElement('input');
+      hiddenProperty.type = 'hidden';
+      hiddenProperty.name = 'properties[Product_Customization]';
+      hiddenProperty.value = customizationData;
+      addToCartForm.appendChild(hiddenProperty);
+      
+      // Submit the form
+      addToCartForm.submit();
+    } else {
+      // Fallback: use fetch to add to cart
+      fetch('/cart/add.js', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: productId,
+          quantity: 1,
+          properties: {
+            'Product_Customization': customizationData
+          }
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        alert('Customized product added to cart!');
+        // Optionally redirect to cart
+        window.location.href = '/cart';
+      })
+      .catch(error => {
+        console.error('Error adding to cart:', error);
+        alert('Error adding product to cart. Please try again.');
+      });
+    }
+  }
+</script>
+
+{% schema %}
+{
+  "name": "Auto Personalizer",
+  "target": "section",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "auto_enable",
+      "label": "Auto-enable",
+      "default": true
+    }
+  ]
+}
+{% endschema %}
