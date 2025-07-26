@@ -20,7 +20,11 @@ import {
   Divider,
   Box
 } from "@shopify/polaris";
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useMemo } from "react";
+import { useDebounce } from "../hooks/useDebounce";
+import { CustomizationModal } from "../components/CustomizationModal";
+import { ElementEditModal } from "../components/ElementEditModal";
+import { VirtualizedProductList } from "../components/VirtualizedProductList";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
@@ -120,6 +124,9 @@ export default function Products() {
   const [selectedTemplate, setSelectedTemplate] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   
+  // Debounced search for better performance
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+  
   // Customization modal state
   const [showCustomizationModal, setShowCustomizationModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
@@ -138,9 +145,16 @@ export default function Products() {
   const [customerName, setCustomerName] = useState('');
   const [customerLogo, setCustomerLogo] = useState<string | null>(null);
 
-  const filteredProducts = products.filter((product: any) =>
-    product.node.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Memoized filtered products using debounced search
+  const filteredProducts = useMemo(() => {
+    if (!debouncedSearchQuery.trim()) {
+      return products;
+    }
+    return products.filter((product: any) =>
+      product.node.title.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+      product.node.handle.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
+    );
+  }, [products, debouncedSearchQuery]);
 
   const handleOpenCustomization = useCallback((product: any) => {
     console.log('handleOpenCustomization called with product:', product);
@@ -212,7 +226,7 @@ export default function Products() {
     setCustomizationElements(prev => prev.filter(el => el.id !== elementId));
   }, []);
 
-  const handleAssignTemplate = (productId: string) => {
+  const handleAssignTemplate = useCallback((productId: string) => {
     if (!selectedTemplate) {
       alert("Please select a template first");
       return;
@@ -224,87 +238,17 @@ export default function Products() {
     formData.append("action", "assign");
     
     submit(formData, { method: "post" });
-  };
+  }, [selectedTemplate, submit]);
 
-  const handleRemoveTemplate = (productId: string) => {
+  const handleRemoveTemplate = useCallback((productId: string) => {
     const formData = new FormData();
     formData.append("productId", productId);
     formData.append("action", "remove");
     
     submit(formData, { method: "post" });
-  };
+  }, [submit]);
 
-  const productRows = filteredProducts.map((product: any) => [
-    <div key={product.node.id} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-      {product.node.images.edges[0] && (
-        <img
-          src={product.node.images.edges[0].node.url}
-          alt={product.node.images.edges[0].node.altText || product.node.title}
-          style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px' }}
-        />
-      )}
-      <div>
-        <button
-          onClick={() => handleOpenCustomization(product.node)}
-          style={{
-            background: 'none',
-            border: 'none',
-            padding: 0,
-            cursor: 'pointer',
-            textAlign: 'left'
-          }}
-        >
-          <Text variant="bodyMd" fontWeight="semibold" as="span">
-            <span style={{ color: '#007bff', textDecoration: 'underline' }}>
-              {product.node.title}
-            </span>
-          </Text>
-        </button>
-        <br />
-        <Text variant="bodySm" tone="subdued" as="span">
-          {product.node.handle}
-        </Text>
-      </div>
-    </div>,
-    <Badge key={`status-${product.node.id}`} tone={product.node.status === 'ACTIVE' ? 'success' : 'critical'}>
-      {product.node.status}
-    </Badge>,
-    product.node.totalInventory || 0,
-    <Badge key={`template-${product.node.id}`} tone="info">
-      No Template
-    </Badge>,
-    <InlineStack key={`actions-${product.node.id}`} gap="200">
-      <Button
-        size="slim"
-        variant="primary"
-        onClick={() => handleOpenCustomization(product.node)}
-      >
-        Add
-      </Button>
-      <Button
-        size="slim"
-        variant="secondary"
-        onClick={() => handleOpenCustomization(product.node)}
-      >
-        Edit
-      </Button>
-      <Button
-        size="slim"
-        onClick={() => handleAssignTemplate(product.node.id)}
-        disabled={!selectedTemplate}
-      >
-        Assign
-      </Button>
-      <Button
-        size="slim"
-        variant="plain"
-        tone="critical"
-        onClick={() => handleRemoveTemplate(product.node.id)}
-      >
-        Remove
-      </Button>
-    </InlineStack>,
-  ]);
+  // Removed productRows - now handled by VirtualizedProductList
 
   const templateOptions = [
     { label: 'Select a template...', value: '' },
@@ -363,660 +307,50 @@ export default function Products() {
         </Layout.Section>
 
         <Layout.Section>
-          <Card>
-            <BlockStack gap="400">
-              <Text variant="headingMd" as="h2">
-                Products ({filteredProducts.length})
-              </Text>
-              
-              {filteredProducts.length > 0 ? (
-                <DataTable
-                  columnContentTypes={['text', 'text', 'numeric', 'text', 'text']}
-                  headings={['Product', 'Status', 'Inventory', 'Current Template', 'Actions']}
-                  rows={productRows}
-                />
-              ) : (
-                <div style={{ textAlign: 'center', padding: '40px' }}>
-                  <Text variant="bodyMd" tone="subdued" as="p">
-                    {searchQuery ? 'No products found matching your search.' : 'No products found.'}
-                  </Text>
-                </div>
-              )}
-            </BlockStack>
-          </Card>
+          <VirtualizedProductList
+            products={filteredProducts}
+            selectedTemplate={selectedTemplate}
+            onOpenCustomization={handleOpenCustomization}
+            onAssignTemplate={handleAssignTemplate}
+            onRemoveTemplate={handleRemoveTemplate}
+          />
         </Layout.Section>
       </Layout>
 
       {/* Customization Modal */}
-      <Modal
+      <CustomizationModal
         open={showCustomizationModal}
         onClose={() => setShowCustomizationModal(false)}
-        title={`🎨 Customize ${selectedProduct?.title || 'Product'}`}
-        size="large"
-      >
-        <Modal.Section>
-          {selectedProduct && (
-            <Layout>
-              {/* Left Panel - Controls */}
-              <Layout.Section variant="oneThird">
-                <BlockStack gap="400">
-                  {/* Main View Settings */}
-                  <Card>
-                    <BlockStack gap="400">
-                      <Text variant="headingMd" as="h2">
-                        📋 Main View
-                      </Text>
-                      
-                      <div>
-                        <Text variant="headingMd" as="h3">
-                          Basic Settings
-                        </Text>
-                        <Box paddingBlockStart="200">
-                          <BlockStack gap="300">
-                            <TextField
-                              label="View Name"
-                              value={viewName}
-                              onChange={setViewName}
-                              placeholder="Main View"
-                              autoComplete="off"
-                            />
-                            
-                            <Select
-                              label="View Background"
-                              options={[
-                                { label: 'Blank Canvas', value: 'blank' },
-                                { label: 'Orange Snowboard Background', value: 'snowboard' },
-                              ]}
-                              value="snowboard"
-                              onChange={() => {}}
-                            />
-                            
-                            <Text variant="bodyMd" as="p">Canvas Dimension</Text>
-                            <InlineStack gap="200">
-                              <div style={{ flex: 1 }}>
-                                <TextField
-                                  label="W"
-                                  value={canvasWidth.toString()}
-                                  onChange={(value) => setCanvasWidth(parseInt(value) || 1000)}
-                                  suffix="px"
-                                  type="number"
-                                  autoComplete="off"
-                                />
-                              </div>
-                              <div style={{ flex: 1 }}>
-                                <TextField
-                                  label="H"
-                                  value={canvasHeight.toString()}
-                                  onChange={(value) => setCanvasHeight(parseInt(value) || 1000)}
-                                  suffix="px"
-                                  type="number"
-                                  autoComplete="off"
-                                />
-                              </div>
-                            </InlineStack>
-                          </BlockStack>
-                        </Box>
-                      </div>
-
-                      {!isDesignStarted && (
-                        <Button variant="primary" size="large" onClick={handleStartDesign}>
-                          Start
-                        </Button>
-                      )}
-                    </BlockStack>
-                  </Card>
-
-                  {/* Elements Panel */}
-                  {isDesignStarted && (
-                    <Card>
-                      <BlockStack gap="400">
-                        <Text variant="headingMd" as="h2">
-                          🎨 Elements
-                        </Text>
-
-                        <BlockStack gap="200">
-                          {customizationElements.map((element, index) => (
-                            <div
-                              key={element.id}
-                              style={{
-                                padding: '12px',
-                                border: '1px solid #ddd',
-                                borderRadius: '8px',
-                                backgroundColor: 'white'
-                              }}
-                            >
-                              <InlineStack align="space-between">
-                                <InlineStack gap="200">
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <span style={{ fontSize: '16px' }}>
-                                      {element.type === 'text' ? '📝' : '📤'}
-                                    </span>
-                                    <div>
-                                      <Text variant="bodyMd" fontWeight="semibold" as="span">
-                                        {element.type === 'text' ? 'Multi Line Text' : 'Upload'}
-                                      </Text>
-                                      <br />
-                                      <Text variant="bodySm" tone="subdued" as="span">
-                                        {index + 1}
-                                      </Text>
-                                    </div>
-                                  </div>
-                                </InlineStack>
-                                <InlineStack gap="100">
-                                  <Button
-                                    size="micro"
-                                    variant="primary"
-                                    onClick={() => handleEditElement(element)}
-                                  >
-                                    Edit
-                                  </Button>
-                                  <Button
-                                    size="micro"
-                                    variant="plain"
-                                    tone="critical"
-                                    onClick={() => handleDeleteElement(element.id)}
-                                  >
-                                    Delete
-                                  </Button>
-                                </InlineStack>
-                              </InlineStack>
-                            </div>
-                          ))}
-                        </BlockStack>
-                      </BlockStack>
-                    </Card>
-                  )}
-
-                  {/* Cart and Order Settings */}
-                  {isDesignStarted && (
-                    <Card>
-                      <BlockStack gap="400">
-                        <Text variant="headingMd" as="h2">
-                          🛒 Cart and Order settings
-                        </Text>
-                        
-                        <BlockStack gap="300">
-                          <Checkbox
-                            label="Save customer input as line item properties"
-                            checked={true}
-                            onChange={() => {}}
-                          />
-                          
-                          <TextField
-                            label="Additional charge for customization"
-                            value="0"
-                            onChange={() => {}}
-                            prefix="₹"
-                            type="number"
-                            autoComplete="off"
-                          />
-                          
-                          <Checkbox
-                            label="Enable live preview for customers"
-                            checked={livePreview}
-                            onChange={setLivePreview}
-                          />
-                        </BlockStack>
-                      </BlockStack>
-                    </Card>
-                  )}
-                </BlockStack>
-              </Layout.Section>
-
-              {/* Right Panel - Canvas and Customer Preview */}
-              <Layout.Section>
-                <BlockStack gap="400">
-                  {/* Design Canvas */}
-                  <Card>
-                    <BlockStack gap="400">
-                      <InlineStack align="space-between">
-                        <Text variant="headingMd" as="h2">
-                          🎨 Design Canvas
-                        </Text>
-                        <InlineStack gap="200">
-                          <Badge tone={livePreview ? 'success' : 'critical'}>
-                            {`Live Preview ${livePreview ? 'ON' : 'OFF'}`}
-                          </Badge>
-                          <Badge tone="info">
-                            Active
-                          </Badge>
-                        </InlineStack>
-                      </InlineStack>
-
-                      {!isDesignStarted ? (
-                        <Box padding="600" background="bg-surface-secondary">
-                          <BlockStack gap="300" align="center">
-                            <div style={{ fontSize: '48px' }}>🎨</div>
-                            <Text variant="headingMd" alignment="center" as="h3">
-                              Ready to Design?
-                            </Text>
-                            <Text variant="bodyMd" tone="subdued" alignment="center" as="p">
-                              Configure your canvas settings and click "Start" to begin designing.
-                            </Text>
-                            <Button variant="primary" size="large" onClick={handleStartDesign}>
-                              Start Designing
-                            </Button>
-                          </BlockStack>
-                        </Box>
-                      ) : (
-                        <div style={{ textAlign: 'center' }}>
-                          <div
-                            style={{
-                              position: 'relative',
-                              width: '100%',
-                              maxWidth: '400px',
-                              aspectRatio: '1',
-                              border: '2px solid #ff6b35',
-                              borderRadius: '8px',
-                              backgroundColor: '#ff6b35',
-                              margin: '0 auto',
-                              overflow: 'hidden',
-                              backgroundImage: 'linear-gradient(135deg, #ff6b35 0%, #ff8e3c 100%)',
-                            }}
-                          >
-                            {/* Canvas Elements */}
-                            {customizationElements.map((element) => (
-                              <div
-                                key={element.id}
-                                style={{
-                                  position: 'absolute',
-                                  left: `${(element.x / canvasWidth) * 100}%`,
-                                  top: `${(element.y / canvasHeight) * 100}%`,
-                                  width: `${(element.width / canvasWidth) * 100}%`,
-                                  height: `${(element.height / canvasHeight) * 100}%`,
-                                  border: '1px dashed rgba(255,255,255,0.5)',
-                                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  fontSize: '10px',
-                                  color: 'white',
-                                  borderRadius: '4px',
-                                }}
-                              >
-                                {element.type === 'text' && (
-                                  <div style={{ textAlign: 'center' }}>
-                                    <div style={{ fontSize: '12px', marginBottom: '2px' }}>📝</div>
-                                    <div style={{ fontSize: '8px' }}>Text Field</div>
-                                  </div>
-                                )}
-                                {element.type === 'upload' && (
-                                  <div style={{ textAlign: 'center' }}>
-                                    <div style={{ fontSize: '12px', marginBottom: '2px' }}>📤</div>
-                                    <div style={{ fontSize: '8px' }}>Logo Upload</div>
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-
-                            {/* Live Preview Overlay */}
-                            {livePreview && (
-                              <>
-                                {/* Customer Name Display */}
-                                <div
-                                  style={{
-                                    position: 'absolute',
-                                    top: '45%',
-                                    left: '50%',
-                                    transform: 'translate(-50%, -50%)',
-                                    color: 'white',
-                                    fontSize: '16px',
-                                    fontWeight: 'bold',
-                                    textShadow: '2px 2px 4px rgba(0,0,0,0.5)',
-                                    fontFamily: 'Impact, Arial, sans-serif',
-                                  }}
-                                >
-                                  {customerName || 'Your Name Here'}
-                                </div>
-
-                                {/* Customer Logo Display */}
-                                {customerLogo && (
-                                  <div
-                                    style={{
-                                      position: 'absolute',
-                                      bottom: '10%',
-                                      left: '50%',
-                                      transform: 'translateX(-50%)',
-                                    }}
-                                  >
-                                    <img
-                                      src={customerLogo}
-                                      alt="Customer logo"
-                                      style={{
-                                        maxWidth: '60px',
-                                        maxHeight: '40px',
-                                        borderRadius: '4px',
-                                        boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                                      }}
-                                    />
-                                  </div>
-                                )}
-                              </>
-                            )}
-
-                            {/* Canvas info */}
-                            <div
-                              style={{
-                                position: 'absolute',
-                                bottom: '4px',
-                                right: '4px',
-                                background: 'rgba(0, 0, 0, 0.7)',
-                                color: 'white',
-                                padding: '2px 6px',
-                                borderRadius: '4px',
-                                fontSize: '8px',
-                              }}
-                            >
-                              {canvasWidth} × {canvasHeight}px
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </BlockStack>
-                  </Card>
-
-                  {/* Customer Preview Panel */}
-                  {isDesignStarted && livePreview && (
-                    <Card>
-                      <BlockStack gap="400">
-                        <Text variant="headingMd" as="h2">
-                          👤 Customer Preview
-                        </Text>
-                        
-                        <InlineStack gap="400">
-                          <div style={{ flex: 1 }}>
-                            <TextField
-                              label="Customer Name (Live Preview)"
-                              value={customerName}
-                              onChange={setCustomerName}
-                              placeholder="Enter name to see live preview..."
-                              autoComplete="off"
-                            />
-                          </div>
-                          <div style={{ flex: 1 }}>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) {
-                                  const reader = new FileReader();
-                                  reader.onload = (e) => {
-                                    setCustomerLogo(e.target?.result as string);
-                                  };
-                                  reader.readAsDataURL(file);
-                                }
-                              }}
-                              style={{
-                                padding: '8px',
-                                border: '1px solid #ddd',
-                                borderRadius: '4px',
-                                width: '100%'
-                              }}
-                            />
-                            <Text variant="bodySm" tone="subdued" as="p">
-                              Upload logo for live preview
-                            </Text>
-                          </div>
-                        </InlineStack>
-                      </BlockStack>
-                    </Card>
-                  )}
-                </BlockStack>
-              </Layout.Section>
-            </Layout>
-          )}
-        </Modal.Section>
-        
-        <Modal.Section>
-          <InlineStack align="end" gap="200">
-            <Button onClick={() => setShowCustomizationModal(false)}>
-              Cancel
-            </Button>
-            <Button variant="primary" onClick={() => {
-              // Save template logic here
-              setShowCustomizationModal(false);
-              alert('Template saved successfully!');
-            }}>
-              Save Template
-            </Button>
-          </InlineStack>
-        </Modal.Section>
-      </Modal>
+        selectedProduct={selectedProduct}
+        customizationElements={customizationElements}
+        setCustomizationElements={setCustomizationElements}
+        canvasWidth={canvasWidth}
+        setCanvasWidth={setCanvasWidth}
+        canvasHeight={canvasHeight}
+        setCanvasHeight={setCanvasHeight}
+        viewName={viewName}
+        setViewName={setViewName}
+        isDesignStarted={isDesignStarted}
+        setIsDesignStarted={setIsDesignStarted}
+        livePreview={livePreview}
+        setLivePreview={setLivePreview}
+        customerName={customerName}
+        setCustomerName={setCustomerName}
+        customerLogo={customerLogo}
+        setCustomerLogo={setCustomerLogo}
+        onEditElement={handleEditElement}
+        onDeleteElement={handleDeleteElement}
+        onStartDesign={handleStartDesign}
+      />
 
       {/* Element Edit Modal */}
-      <Modal
+      <ElementEditModal
         open={showElementEditModal}
         onClose={() => setShowElementEditModal(false)}
-        title={`Edit ${editingElement?.type === 'text' ? 'Text' : 'Upload'} Element`}
-        size="large"
-      >
-        <Modal.Section>
-          {editingElement && (
-            <BlockStack gap="400">
-              {/* Position Settings */}
-              <Card>
-                <BlockStack gap="300">
-                  <Text variant="headingMd" as="h3">Position & Size</Text>
-                  <InlineStack gap="200">
-                    <div style={{ flex: 1 }}>
-                      <TextField
-                        label="X Position"
-                        value={editingElement.x.toString()}
-                        onChange={(value) => setEditingElement({
-                          ...editingElement,
-                          x: parseInt(value) || 0
-                        })}
-                        suffix="px"
-                        type="number"
-                        autoComplete="off"
-                      />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <TextField
-                        label="Y Position"
-                        value={editingElement.y.toString()}
-                        onChange={(value) => setEditingElement({
-                          ...editingElement,
-                          y: parseInt(value) || 0
-                        })}
-                        suffix="px"
-                        type="number"
-                        autoComplete="off"
-                      />
-                    </div>
-                  </InlineStack>
-                  <InlineStack gap="200">
-                    <div style={{ flex: 1 }}>
-                      <TextField
-                        label="Width"
-                        value={editingElement.width.toString()}
-                        onChange={(value) => setEditingElement({
-                          ...editingElement,
-                          width: parseInt(value) || 100
-                        })}
-                        suffix="px"
-                        type="number"
-                        autoComplete="off"
-                      />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <TextField
-                        label="Height"
-                        value={editingElement.height.toString()}
-                        onChange={(value) => setEditingElement({
-                          ...editingElement,
-                          height: parseInt(value) || 50
-                        })}
-                        suffix="px"
-                        type="number"
-                        autoComplete="off"
-                      />
-                    </div>
-                  </InlineStack>
-                </BlockStack>
-              </Card>
-
-              {/* Text-specific properties */}
-              {editingElement.type === 'text' && (
-                <Card>
-                  <BlockStack gap="300">
-                    <Text variant="headingMd" as="h3">Text Properties</Text>
-                    <TextField
-                      label="Placeholder Text"
-                      value={editingElement.properties.placeholder || ''}
-                      onChange={(value) => setEditingElement({
-                        ...editingElement,
-                        properties: {
-                          ...editingElement.properties,
-                          placeholder: value
-                        }
-                      })}
-                      autoComplete="off"
-                    />
-                    <InlineStack gap="200">
-                      <div style={{ flex: 1 }}>
-                        <TextField
-                          label="Font Size"
-                          value={editingElement.properties.fontSize?.toString() || '16'}
-                          onChange={(value) => setEditingElement({
-                            ...editingElement,
-                            properties: {
-                              ...editingElement.properties,
-                              fontSize: parseInt(value) || 16
-                            }
-                          })}
-                          suffix="px"
-                          type="number"
-                          autoComplete="off"
-                        />
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <Select
-                          label="Font Family"
-                          options={[
-                            { label: 'Arial', value: 'Arial' },
-                            { label: 'Impact', value: 'Impact' },
-                            { label: 'Times New Roman', value: 'Times New Roman' },
-                            { label: 'Helvetica', value: 'Helvetica' },
-                          ]}
-                          value={editingElement.properties.fontFamily || 'Arial'}
-                          onChange={(value) => setEditingElement({
-                            ...editingElement,
-                            properties: {
-                              ...editingElement.properties,
-                              fontFamily: value
-                            }
-                          })}
-                        />
-                      </div>
-                    </InlineStack>
-                    <div style={{ maxWidth: '200px' }}>
-                      <ColorPicker
-                        color={{ hue: 0, saturation: 0, brightness: 1 }}
-                        onChange={() => {}}
-                      />
-                      <Text variant="bodySm" as="p">Text Color</Text>
-                    </div>
-                    <InlineStack gap="300">
-                      <Checkbox
-                        label="Bold"
-                        checked={editingElement.properties.bold || false}
-                        onChange={(checked) => setEditingElement({
-                          ...editingElement,
-                          properties: {
-                            ...editingElement.properties,
-                            bold: checked
-                          }
-                        })}
-                      />
-                      <Checkbox
-                        label="Italic"
-                        checked={editingElement.properties.italic || false}
-                        onChange={(checked) => setEditingElement({
-                          ...editingElement,
-                          properties: {
-                            ...editingElement.properties,
-                            italic: checked
-                          }
-                        })}
-                      />
-                      <Checkbox
-                        label="Required"
-                        checked={editingElement.properties.required || false}
-                        onChange={(checked) => setEditingElement({
-                          ...editingElement,
-                          properties: {
-                            ...editingElement.properties,
-                            required: checked
-                          }
-                        })}
-                      />
-                    </InlineStack>
-                    <TextField
-                      label="Max Length"
-                      value={editingElement.properties.maxLength?.toString() || ''}
-                      onChange={(value) => setEditingElement({
-                        ...editingElement,
-                        properties: {
-                          ...editingElement.properties,
-                          maxLength: parseInt(value) || undefined
-                        }
-                      })}
-                      type="number"
-                      autoComplete="off"
-                    />
-                  </BlockStack>
-                </Card>
-              )}
-
-              {/* Upload-specific properties */}
-              {editingElement.type === 'upload' && (
-                <Card>
-                  <BlockStack gap="300">
-                    <Text variant="headingMd" as="h3">Upload Properties</Text>
-                    <TextField
-                      label="Max File Size (MB)"
-                      value={editingElement.properties.maxLength?.toString() || '5'}
-                      onChange={(value) => setEditingElement({
-                        ...editingElement,
-                        properties: {
-                          ...editingElement.properties,
-                          maxLength: parseInt(value) || 5
-                        }
-                      })}
-                      type="number"
-                      autoComplete="off"
-                    />
-                    <Checkbox
-                      label="Required"
-                      checked={editingElement.properties.required || false}
-                      onChange={(checked) => setEditingElement({
-                        ...editingElement,
-                        properties: {
-                          ...editingElement.properties,
-                          required: checked
-                        }
-                      })}
-                    />
-                  </BlockStack>
-                </Card>
-              )}
-            </BlockStack>
-          )}
-        </Modal.Section>
-        
-        <Modal.Section>
-          <InlineStack align="end" gap="200">
-            <Button onClick={() => setShowElementEditModal(false)}>
-              Cancel
-            </Button>
-            <Button variant="primary" onClick={handleSaveElement}>
-              Save Changes
-            </Button>
-          </InlineStack>
-        </Modal.Section>
-      </Modal>
+        editingElement={editingElement}
+        setEditingElement={setEditingElement}
+        onSave={handleSaveElement}
+      />
     </Page>
   );
 }

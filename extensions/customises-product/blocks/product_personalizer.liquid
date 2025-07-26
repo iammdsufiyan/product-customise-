@@ -280,8 +280,16 @@
         timestamp: new Date().toISOString()
       };
       
+      // Create simple display text for cart - name on first line, date on second line
+      let cartDisplayText = '';
+      if (data.text) {
+        cartDisplayText = `${data.text}<br>${new Date().toLocaleString()}`;
+      } else {
+        cartDisplayText = `Personalized<br>${new Date().toLocaleString()}`;
+      }
+      
       if (hiddenInput) {
-        hiddenInput.value = JSON.stringify(data);
+        hiddenInput.value = cartDisplayText;
       }
     }
 
@@ -311,21 +319,97 @@
     updatePreview();
     updateCharacterCount();
 
-    // Add to cart integration
-    const addToCartForm = document.querySelector('form[action*="/cart/add"]');
-    if (addToCartForm) {
-      addToCartForm.addEventListener('submit', function(e) {
-        const personalizationData = hiddenInput ? hiddenInput.value : '';
-        if (personalizationData) {
-          // Add personalization data as a line item property
-          const hiddenProperty = document.createElement('input');
-          hiddenProperty.type = 'hidden';
-          hiddenProperty.name = 'properties[Personalization]';
-          hiddenProperty.value = personalizationData;
-          addToCartForm.appendChild(hiddenProperty);
-        }
-      });
+    // Safe Cart Integration - Non-intrusive approach
+    function initializeCartIntegration() {
+      // Store personalization data globally
+      window.productPersonalizationData = window.productPersonalizationData || {};
+      
+      function updatePersonalizationData() {
+        // Get the actual field label from the form
+        const textInput = document.getElementById(`custom-text-${blockId}`);
+        const fieldLabel = textInput ?
+          form.querySelector(`label[for="${textInput.id}"]`)?.textContent?.replace('*', '').trim() || 'Custom Text' :
+          'Personalization';
+        
+        window.productPersonalizationData[blockId] = {
+          type: fieldLabel,
+          data: hiddenInput ? hiddenInput.value : ''
+        };
+      }
+
+      // Update data whenever personalization changes
+      updatePersonalizationData();
+
+      // Initialize cart integration only once
+      if (!window.cartIntegrationInitialized) {
+        window.cartIntegrationInitialized = true;
+
+        // Safe form submission handler
+        document.addEventListener('submit', function(e) {
+          const form = e.target;
+          if (form.action && (form.action.includes('/cart/add') || form.action.includes('cart/add.js'))) {
+            console.log('Basic Personalizer: Form submission detected');
+            
+            // Update all personalization data before submitting
+            Object.keys(window.productPersonalizationData || {}).forEach(key => {
+              const personalizationInfo = window.productPersonalizationData[key];
+              if (personalizationInfo && personalizationInfo.data && personalizationInfo.data.trim()) {
+                // Check if property already exists
+                const existingProp = form.querySelector(`input[name="properties[${personalizationInfo.type}]"]`);
+                if (!existingProp) {
+                  const hiddenProperty = document.createElement('input');
+                  hiddenProperty.type = 'hidden';
+                  hiddenProperty.name = `properties[${personalizationInfo.type}]`;
+                  hiddenProperty.value = personalizationInfo.data;
+                  form.appendChild(hiddenProperty);
+                  console.log(`Basic Personalizer: Added form property ${personalizationInfo.type}:`, personalizationInfo.data);
+                }
+              }
+            });
+          }
+        }, true); // Use capture phase to ensure we run before other handlers
+
+        // Safe fetch interception (less intrusive)
+        const originalFetch = window.fetch;
+        window.fetch = function(url, options = {}) {
+          // Only intercept cart add requests
+          if (url && (url.includes('/cart/add') || url.includes('cart/add.js'))) {
+            console.log('Basic Personalizer: Intercepting fetch cart add request');
+            
+            try {
+              if (options.body && typeof options.body === 'string') {
+                const body = JSON.parse(options.body);
+                if (!body.properties) body.properties = {};
+                
+                // Add all personalization data
+                Object.keys(window.productPersonalizationData || {}).forEach(key => {
+                  const personalizationInfo = window.productPersonalizationData[key];
+                  if (personalizationInfo && personalizationInfo.data && personalizationInfo.data.trim()) {
+                    body.properties[personalizationInfo.type] = personalizationInfo.data;
+                    console.log(`Basic Personalizer: Added ${personalizationInfo.type} to fetch:`, personalizationInfo.data);
+                  }
+                });
+                
+                options.body = JSON.stringify(body);
+              }
+            } catch (e) {
+              console.log('Basic Personalizer: Could not modify fetch body:', e);
+            }
+          }
+          
+          return originalFetch.call(this, url, options);
+        };
+
+        console.log('Basic Personalizer: Safe cart integration initialized');
+      }
+
+      // Update personalization data when form changes
+      form.addEventListener('input', updatePersonalizationData);
+      form.addEventListener('change', updatePersonalizationData);
     }
+
+    // Initialize cart integration
+    initializeCartIntegration();
   });
 </script>
 

@@ -1,0 +1,45 @@
+{% comment %}
+  Cart Personalization Display Snippet
+  This snippet displays personalization data including logos in the cart
+  Usage: {% render 'cart-personalization-display', item: item %}
+{% endcomment %}
+
+{% if item.properties %}
+  <div class="cart-personalization">
+    {% for property in item.properties %}
+      {% assign property_name = property.first %}
+      {% assign property_value = property.last %}
+      
+      {% if property_name == 'Personalization' %}
+        <div class="personalization-text">
+          <strong>{{ property_value }}</strong>
+        </div>
+      {% elsif property_name == 'Logo' %}
+        <div class="personalization-logo">
+          <img src="{{ property_value }}" alt="Custom Logo" style="max-width: 50px; max-height: 50px; border-radius: 4px; margin-top: 5px;">
+        </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+{% endif %}
+
+<style>
+  .cart-personalization {
+    margin-top: 8px;
+    padding: 8px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    border-left: 3px solid #007bff;
+  }
+  
+  .personalization-text {
+    font-size: 0.9em;
+    color: #333;
+    margin-bottom: 5px;
+  }
+  
+  .personalization-logo img {
+    border: 1px solid #ddd;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+</style>

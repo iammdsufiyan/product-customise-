@@ -3,7 +3,7 @@
 client_id = "8116dc150b03c3d14ad2d4316be3481d"
 name = "customise-product"
 handle = "customise-product-3"
-application_url = "https://refinance-solve-doing-housewares.trycloudflare.com"
+application_url = "https://symposium-accuracy-origins-architectural.trycloudflare.com"
 embedded = true
 
 [build]
@@ -26,7 +26,7 @@ api_version = "2025-07"
 scopes = "write_products"
 
 [auth]
-redirect_urls = ["https://refinance-solve-doing-housewares.trycloudflare.com/auth/callback", "https://refinance-solve-doing-housewares.trycloudflare.com/auth/shopify/callback", "https://refinance-solve-doing-housewares.trycloudflare.com/api/auth/callback"]
+redirect_urls = ["https://symposium-accuracy-origins-architectural.trycloudflare.com/auth/callback", "https://symposium-accuracy-origins-architectural.trycloudflare.com/auth/shopify/callback", "https://symposium-accuracy-origins-architectural.trycloudflare.com/api/auth/callback"]
 
 [pos]
 embedded = false

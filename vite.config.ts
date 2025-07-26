@@ -66,6 +66,30 @@ export default defineConfig({
   ],
   build: {
     assetsInlineLimit: 0,
+    rollupOptions: {
+      output: {
+        manualChunks: (id: string) => {
+          // Vendor chunks
+          if (id.includes('@shopify/polaris')) {
+            return 'polaris';
+          }
+          if (id.includes('@shopify/app-bridge-react')) {
+            return 'app-bridge';
+          }
+          if (id.includes('react') || id.includes('react-dom')) {
+            return 'react';
+          }
+          
+          // App chunks
+          if (id.includes('/app/components/')) {
+            return 'components';
+          }
+          if (id.includes('/app/utils/') || id.includes('/app/hooks/')) {
+            return 'utils';
+          }
+        }
+      }
+    }
   },
   optimizeDeps: {
     include: ["@shopify/app-bridge-react", "@shopify/polaris"],

@@ -21,17 +21,25 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       return json({ hasOptions: false, error: "Product ID is required" }, { status: 400 });
     }
 
-    // Check if product has customization options in database
     // Handle both full GID and numeric ID formats
     const cleanProductId = productId.replace('gid://shopify/Product/', '');
     
+    // Optimized database query with selective fields
     const productOptionSet = await db.productOptionSet.findFirst({
       where: {
         productId: cleanProductId,
         isActive: true
       },
       include: {
-        optionSet: true
+        optionSet: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            fields: true,
+            updatedAt: true
+          }
+        }
       }
     });
 
@@ -39,7 +47,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       return json({ hasOptions: false });
     }
 
-    // Parse the template data
+    // Parse the template data with error handling
     let template = null;
     try {
       template = JSON.parse(productOptionSet.optionSet.fields);
@@ -48,7 +56,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       return json({ hasOptions: false, error: "Invalid template data" });
     }
 
-    return json({
+    const result = {
       hasOptions: true,
       template: {
         id: productOptionSet.optionSet.id,
@@ -59,9 +67,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         livePreview: template.livePreview !== false,
         canvasWidth: template.canvasWidth || 1000,
         canvasHeight: template.canvasHeight || 1000,
-        viewBackground: template.viewBackground || 'blank'
+        viewBackground: template.viewBackground || 'blank',
+        lastUpdated: productOptionSet.optionSet.updatedAt
       }
-    });
+    };
+
+    return json(result);
 
   } catch (error) {
     console.error('Error checking product options:', error);

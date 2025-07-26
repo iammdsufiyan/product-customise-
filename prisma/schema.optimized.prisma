@@ -1,5 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// Optimized Prisma schema with performance improvements
+// This is your Prisma schema file with performance optimizations
 
 generator client {
   provider = "prisma-client-js"
@@ -26,6 +26,9 @@ model Session {
   locale      String?
   collaborator Boolean? @default(false)
   emailVerified Boolean? @default(false)
+
+  // Add index for frequently queried shop field
+  @@index([shop])
 }
 
 model OptionSet {
@@ -40,6 +43,10 @@ model OptionSet {
   // Relations
   productOptionSets ProductOptionSet[]
   
+  // Add indexes for performance
+  @@index([isActive])
+  @@index([createdAt])
+  @@index([name])
   @@map("option_sets")
 }
 
@@ -59,14 +66,13 @@ model ProductOptionSet {
   // Ensure unique product-optionset combination
   @@unique([productId, optionSetId])
   
-  // Performance indexes - Critical for query optimization
-  @@index([productId])                    // Most critical - frequently queried
-  @@index([productId, isActive])          // Composite index for active product queries
-  @@index([optionSetId])                  // For option set lookups
-  @@index([isActive])                     // For filtering active records
-  @@index([createdAt])                    // For date-based queries
-  @@index([productHandle])                // For handle-based lookups
-  
+  // Critical indexes for performance optimization
+  @@index([productId]) // Most important - frequently queried
+  @@index([productId, isActive]) // Composite index for active product queries
+  @@index([optionSetId])
+  @@index([isActive])
+  @@index([createdAt])
+  @@index([productHandle]) // For handle-based lookups
   @@map("product_option_sets")
 }
 
@@ -79,6 +85,12 @@ model CustomerPersonalization {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   
+  // Add indexes for analytics and reporting
+  @@index([productId])
+  @@index([optionSetId])
+  @@index([orderId])
+  @@index([createdAt])
+  @@index([productId, createdAt]) // Composite for product analytics
   @@map("customer_personalizations")
 }
 
@@ -91,5 +103,42 @@ model Analytics {
   averageOrderValue     Float    @default(0.0)
   date                  DateTime @default(now())
   
+  // Add indexes for analytics queries
+  @@index([templateId])
+  @@index([productId])
+  @@index([date])
+  @@index([templateId, date]) // Composite for template analytics over time
+  @@index([productId, date])  // Composite for product analytics over time
   @@map("analytics")
+}
+
+// New model for caching frequently accessed data
+model CacheEntry {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String   // JSON string
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([key])
+  @@index([expiresAt])
+  @@map("cache_entries")
+}
+
+// New model for performance monitoring
+model PerformanceLog {
+  id          String   @id @default(cuid())
+  endpoint    String
+  method      String
+  duration    Int      // Duration in milliseconds
+  statusCode  Int
+  userAgent   String?
+  ipAddress   String?
+  timestamp   DateTime @default(now())
+  
+  @@index([endpoint])
+  @@index([timestamp])
+  @@index([duration])
+  @@map("performance_logs")
 }
