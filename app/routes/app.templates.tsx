@@ -51,6 +51,19 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
 
   try {
+    // Fetch existing option sets (templates) from database
+    const productOptionSets = await db.productOptionSet.findMany({
+      where: {
+        isActive: true
+      },
+      include: {
+        optionSet: true
+      },
+      orderBy: {
+        updatedAt: 'desc'
+      }
+    });
+
     // Fetch products from Shopify using GraphQL
     const productsResponse = await admin.graphql(`
       query getProducts($first: Int!) {
@@ -85,23 +98,31 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const productsData = await productsResponse.json();
     const products = productsData.data?.products?.edges || [];
 
-    // Transform products data
-    const transformedProducts: Product[] = products.map((product: any) => ({
-      id: product.node.id,
-      title: product.node.title,
-      handle: product.node.handle,
-      status: product.node.status,
-      vendor: product.node.vendor || 'booksss12345',
-      tags: product.node.tags || [],
-      totalInventory: product.node.totalInventory || 0,
-      hasOptions: false, // Default to false, will be managed by user actions
-      images: product.node.images
-    }));
+    // Transform products data and check if they have templates
+    const transformedProducts: Product[] = products.map((product: any) => {
+      const cleanProductId = product.node.id.replace('gid://shopify/Product/', '');
+      const hasTemplate = productOptionSets.some(pos => pos.productId === cleanProductId);
+      
+      return {
+        id: product.node.id,
+        title: product.node.title,
+        handle: product.node.handle,
+        status: product.node.status,
+        vendor: product.node.vendor || 'booksss12345',
+        tags: product.node.tags || [],
+        totalInventory: product.node.totalInventory || 0,
+        hasOptions: hasTemplate,
+        images: product.node.images
+      };
+    });
 
-    return json({ products: transformedProducts });
+    return json({
+      products: transformedProducts,
+      templates: productOptionSets
+    });
   } catch (error) {
-    console.error('Error loading products:', error);
-    return json({ products: [] });
+    console.error('Error loading products and templates:', error);
+    return json({ products: [], templates: [] });
   }
 };
 
@@ -197,16 +218,18 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       console.log(`Editing options for product: ${productId}`);
       
       if (templateData) {
+        const cleanProductId = productId.replace('gid://shopify/Product/', '');
+        
         // Find existing option set for this product
         const productOptionSet = await db.productOptionSet.findFirst({
           where: {
-            productId: productId.replace('gid://shopify/Product/', ''),
+            productId: cleanProductId,
             isActive: true
           }
         });
 
         if (productOptionSet) {
-          // Update the option set with new template data
+          // Update the existing option set with new template data
           await db.optionSet.update({
             where: { id: productOptionSet.optionSetId },
             data: {
@@ -214,12 +237,57 @@ export const action = async ({ request }: ActionFunctionArgs) => {
               updatedAt: new Date()
             }
           });
+          console.log(`Template updated for product: ${cleanProductId}`);
+        } else {
+          // Create new template if it doesn't exist
+          console.log(`Creating new template for product: ${cleanProductId}`);
+          
+          // Get product details from Shopify
+          const productResponse = await admin.graphql(`
+            query getProduct($id: ID!) {
+              product(id: $id) {
+                id
+                title
+                handle
+              }
+            }
+          `, {
+            variables: { id: productId }
+          });
+          
+          const productData = await productResponse.json();
+          const product = productData.data?.product;
+          
+          if (product) {
+            // Create new option set
+            const newOptionSet = await db.optionSet.create({
+              data: {
+                name: `${product.title} Customization`,
+                description: `Customization options for ${product.title}`,
+                fields: templateData,
+                isActive: true
+              }
+            });
+
+            // Create product-option set relationship
+            await db.productOptionSet.create({
+              data: {
+                productId: cleanProductId,
+                productTitle: product.title,
+                productHandle: product.handle,
+                optionSetId: newOptionSet.id,
+                isActive: true
+              }
+            });
+            
+            console.log(`New template created for product: ${cleanProductId}, optionSetId: ${newOptionSet.id}`);
+          }
         }
       }
       
       return json({
         success: true,
-        message: "Product options updated successfully!"
+        message: "Template saved successfully!"
       });
     }
 

@@ -15,6 +15,7 @@ export default [
       index("routes/app._index.tsx"),
       route("products", "routes/app.products.tsx"),
       route("templates", "routes/app.templates.tsx"),
+      route("manage-templates", "routes/app.manage-templates.tsx"),
       route("analytics", "routes/app.analytics.tsx"),
       route("additional", "routes/app.additional.tsx"),
     ]),

@@ -1,24 +1,60 @@
 import { json, LoaderFunctionArgs } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import { authenticate } from "../shopify.server";
+import db from "../db.server";
 import { Card, Page, Layout, Text, Button, DataTable, Badge, BlockStack } from "@shopify/polaris";
 import { PlusIcon } from "@shopify/polaris-icons";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
 
-  // Mock data for now - will be replaced with actual database calls
-  const recentPersonalizations: any[] = [];
-  const analytics = {
-    totalTemplates: 0,
-    totalPersonalizations: 0,
-    activeTemplates: 0,
-  };
+  try {
+    // Fetch actual data from database
+    const totalOptionSets = await db.optionSet.count({
+      where: { isActive: true }
+    });
+    
+    const activeProductOptionSets = await db.productOptionSet.count({
+      where: { isActive: true }
+    });
+    
+    const totalPersonalizations = await db.customerPersonalization.count();
+    
+    // Fetch recent personalizations
+    const recentPersonalizations = await db.customerPersonalization.findMany({
+      take: 5,
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        productId: true,
+        customerData: true,
+        createdAt: true,
+        optionSetId: true
+      }
+    });
 
-  return json({
-    recentPersonalizations,
-    analytics,
-  });
+    const analytics = {
+      totalTemplates: totalOptionSets,
+      totalPersonalizations: totalPersonalizations,
+      activeTemplates: activeProductOptionSets,
+    };
+
+    return json({
+      recentPersonalizations,
+      analytics,
+    });
+  } catch (error) {
+    console.error('Error loading dashboard data:', error);
+    // Fallback to empty data if there's an error
+    return json({
+      recentPersonalizations: [],
+      analytics: {
+        totalTemplates: 0,
+        totalPersonalizations: 0,
+        activeTemplates: 0,
+      },
+    });
+  }
 };
 
 export default function Index() {
@@ -92,7 +128,7 @@ export default function Index() {
                 </Text>
                 <div style={{ marginTop: '16px' }}>
                   <BlockStack gap="300">
-                    <Button url="/app/templates" variant="primary">
+                    <Button url="/app/manage-templates" variant="primary">
                       Manage Templates
                     </Button>
                     <Button url="/app/products">

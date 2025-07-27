@@ -82,6 +82,27 @@ model CustomerPersonalization {
   @@map("customer_personalizations")
 }
 
+model Template {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  productId   String   // Shopify product ID
+  productTitle String? // Cache product title for display
+  productHandle String? // Cache product handle
+  templateData String  // JSON string containing template configuration
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Performance indexes
+  @@index([productId])
+  @@index([productId, isActive])
+  @@index([isActive])
+  @@index([createdAt])
+  
+  @@map("templates")
+}
+
 model Analytics {
   id                    String   @id @default(cuid())
   templateId            String
